@@ -5,7 +5,7 @@ Created on Fri Sep 21 10:08:36 2018
 
 @author: madeleine
 
-Usage: python simulation_mutating_phage_niagara_resume.py timestamp
+Usage: python simulation_mutating_phage_checkpoint_restart.py timestamp
 """
 
 import numpy as np
