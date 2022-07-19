@@ -1,6 +1,6 @@
 # CRISPR-dynamics-model
 
-Simulation and figure code for a model of interacting bacteria and phage with CRISPR.
+Simulation and figure code for a model of interacting bacteria and phage with CRISPR. bioRxiv DOI: [10.1101/2022.07.07.498272](https://doi.org/10.1101/2022.07.07.498272).
 
 ## Index
 
