@@ -50,13 +50,13 @@ def factors(n):
 
 # +
 # find folder based on timestamp
-all_data = pd.read_csv("all_data.csv", index_col = 0)
+all_data = pd.read_csv("../data/all_data.csv", index_col = 0)
 
 # simulation identifying timestamp
 timestamp = "2019-02-25T14:24:15.599257" # c0=10000.0, eta=0.0001,e=0.95, mu =0.00001, nu = 0.1908, m =7.125 
 
 # get folder for simulation
-top_folder = "/media/madeleine/My Passport/Data/results/" + str(all_data[all_data['timestamp'] 
+top_folder = "../data/" + str(all_data[all_data['timestamp'] 
                                                                          == timestamp]['folder_date'].values[0])
 
 # +
@@ -72,7 +72,7 @@ f, c0, g, B, R, eta, pv, alpha, e, L, mu, m_init, gen_max, max_save, theta, pop_
 # ### Load all simulation summary statistics
 
 # +
-grouped_data = pd.read_csv("grouped_data_predicted_m_Fokker_Planck.csv", 
+grouped_data = pd.read_csv("../data/grouped_data.csv", 
                            index_col = 0, header=[0,1])
 
 # remove unnamed levels
@@ -552,7 +552,7 @@ plt.savefig("fig1_E.svg")
 
 # +
 # load dataframe with extinction information
-extinction_df = pd.read_csv("extinction_df.csv", index_col = 0)
+extinction_df = pd.read_csv("../data/extinction_df.csv", index_col = 0)
 
 extinction_df_grouped = extinction_df.groupby(['C0', 'mu', 'eta', 'e', 'B', 'f', 'pv', 'm_init', 'pv_type', 'theta'])[['mean_m', 
         'mean_nb', 'mean_nu',
