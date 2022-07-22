@@ -120,7 +120,7 @@ def Aterm(f,g,alpha,pv,B):
 analytic_steady_state_vec = np.vectorize(analytic_steady_state)
 
 # +
-grouped_data = pd.read_csv("grouped_data_predicted_m_Fokker_Planck.csv", 
+grouped_data = pd.read_csv("../data/grouped_data.csv", 
                            index_col = 0, header=[0,1])
 
 # remove unnamed levels
@@ -138,7 +138,7 @@ grouped_data_multisample = grouped_data[grouped_data['mean_m']['count'] > 2]
 # -
 
 # load data
-all_data = pd.read_csv("all_data.csv", index_col = 0)
+all_data = pd.read_csv("../data/all_data.csv", index_col = 0)
 
 all_data.shape
 
@@ -192,7 +192,7 @@ gen_max_list = []
 
 
 for i, timestamp in tqdm(enumerate(timestamps)):
-    top_folder = "/media/madeleine/My Passport/Data/results/" + str(top_folders[i])
+    top_folder = "../data/" + str(top_folders[i])
     folder, fn = find_file("pop_array_%s.txt.npz" %timestamp, top_folder)
 
     f, c0, g, B, R, eta, pv, alpha, e, L, mu, m_init, gen_max, max_save, theta, pop_array, \
@@ -732,7 +732,6 @@ axs[0].yaxis.label.set_color('rebeccapurple')
 
 axs[0].legend(loc = 'upper left')
 
-plt.tight_layout()
 plt.savefig("pop_sizes_simulation_and_theory_small_%s.pdf" %timestamp)
 
 # -
