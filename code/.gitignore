@@ -1,0 +1,5 @@
+*.pdf
+*.svg
+*.png
+__pycache__/
+*.pickle
