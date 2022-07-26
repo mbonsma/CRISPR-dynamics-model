@@ -635,7 +635,288 @@ plt.savefig("fig1_F.svg")
 
 # ## Supplementary figures
 
+# ### Bubble plot video
+#
+# This relies on `phages_dict` above.
 
+# +
+## Make bubble plot frames
+clone_plot = False # include plot of clone size at the bottom if True (very slow to run)
+
+scale = 50. # increase this to increase marker size
+length = 0.3 # increase this to plot bubbles farther apart from each other
+#box_size = 12.1
+box_size = 10
+transparency = 0.1
+#colours1 = cm.hsv(np.linspace(0,1,30))
+colours1 = cm.gist_rainbow(np.linspace(0,1,30))
+colour_spread = 0.5
+#colour_spread = 2 # increase this if colours look too similar
+position_offset = 5 # add this to mutation_pos to turn the whole thing radially
+
+# use different spread options partway through to highlight lineages that have separated
+spread_1 = 55. # increase this to smear blobs out more radially
+spread_2 = 15
+spread_change_time = 3760
+
+skip = 100
+
+time_window = skip*10 # number of bacterial generations to show on the bottom plot
+#pad = time_window * 0.1
+pad = 0
+
+facs = np.sort(list(factors(m_init)))
+nrows_ncols = facs[int(len(facs)/2 -1): int(len(facs)/2 + 1)]
+
+if len(nrows_ncols) == 1:
+    center_positions_x = [0]
+    center_positions_y = [0]
+else:
+    center_positions_x = np.linspace(-5,5,nrows_ncols[1])
+    center_positions_y = np.linspace(-3,3,nrows_ncols[0])
+
+X, Y = np.meshgrid(center_positions_x, center_positions_y)
+center_positions_x = X.flatten()
+center_positions_y = Y.flatten()
+
+
+for i in range(int((pop_array[-1,-1]*g*c0)/skip)):
+    time = i*skip
+    t_ind = find_nearest(pop_array[:,-1].toarray(), time/(g*c0))
+    t_ind_0 = find_nearest(pop_array[:,-1].toarray(), (time - time_window)/(g*c0))
+    
+    #if time < 9300:
+    #    continue
+    #if time > 100000:
+    #    break
+    
+    if clone_plot == True:
+        fig = plt.figure(figsize = (20, 12))
+    
+        gs_bubble = gridspec.GridSpec(4,2)
+        #gs_bubble.update(left=absolute_left, right=0.36, bottom = 0.55, top = 0.95)
+
+        ax0 = plt.subplot(gs_bubble[0:3, 0])
+        ax1 = plt.subplot(gs_bubble[0:3, 1])
+        ax2 = plt.subplot(gs_bubble[3, 0])
+        ax3 = plt.subplot(gs_bubble[3, 1])
+
+        ax2.set_xlabel("Time (bacterial generations)", fontsize = 18)
+        ax3.set_xlabel("Time (bacterial generations)", fontsize = 18)
+        ax2.set_ylabel("Population size", fontsize = 18)
+        ax2.tick_params(axis='both', which='major', labelsize=18)
+        ax3.tick_params(axis='both', which='major', labelsize=18)
+        ax2.set_yscale('log')
+        ax3.set_yscale('log')
+
+        ## plot total population size and clone sizes
+
+        if time > time_window:
+            times = pop_array[t_ind_0:t_ind,-1].toarray() *g*c0
+            nv = np.sum(pop_array[t_ind_0:t_ind, 1+max_m : 2*max_m + 1], axis = 1)
+            nb = np.sum(pop_array[t_ind_0:t_ind, : max_m +1], axis =1)
+            ax2.set_xlim(time -time_window, time+pad)
+            ax3.set_xlim(time -time_window, time+pad)
+        else:
+            times = pop_array[:t_ind,-1].toarray() *g*c0
+            nv = np.sum(pop_array[:t_ind, 1+max_m : 2*max_m + 1], axis = 1)
+            nb = np.sum(pop_array[:t_ind, : max_m +1], axis =1)
+            ax2.set_xlim(0, time_window+pad)
+            ax3.set_xlim(0, time_window+pad)
+
+        ax2.plot(times, nv, color = 'k', linewidth = 2, label = "Total population")
+        ax3.plot(times, nb, color = 'k', linewidth = 2, label = "Total population")
+        ymax = np.max(pop_array[:, max_m+1 : 2*max_m+1])
+        xmax = np.max(pop_array[:, 1 : max_m+1])
+        ax2.set_ylim(8*10**-1, ymax*1.1)
+        ax3.set_ylim(8*10**-1, xmax*3)
+
+    else:
+        fig, axs = plt.subplots(1,2, figsize = (20, 9))
+        ax0 = axs[0]
+        ax1 = axs[1]
+        
+    # bubble boxes    
+    ax0.set_xlim(-box_size,box_size)
+    ax0.set_ylim(-box_size,box_size)
+    ax0.set_xticks([])
+    ax0.set_yticks([])
+
+    ax1.set_xlim(-box_size,box_size)
+    ax1.set_ylim(-box_size,box_size)
+
+    ax1.set_xticks([])
+    ax1.set_yticks([])
+    
+    ax0.set_title("Phages", fontsize = 28)
+    ax1.set_title("Bacteria", fontsize = 28)    
+    
+    
+    ## bubbles
+    shift = 1
+    legend_sizes = np.logspace(0,4,5)
+    for l in range(len(legend_sizes)):
+        ax0.scatter(-box_size + 0.1*box_size, 0-box_size*0.25 - box_size*0.13*l, c = 'none', 
+                    s = scale*np.log(shift+legend_sizes[l]), edgecolors = 'k')
+        ax0.annotate(str(round(legend_sizes[l],3)), (-box_size + 0.2*box_size, 0-box_size*0.27 - box_size*0.13*l), 
+                     fontsize = 14)
+
+    for m in range(m_init):
+        ax0.scatter(center_positions_x[m], center_positions_y[m], s = scale*np.log(pop_array[t_ind, max_m+1 + m]+1), c = 'k', edgecolors = 'k')
+        ax1.scatter(center_positions_x[m], center_positions_y[m], s = scale*np.log(pop_array[t_ind, 1 + m]+1), c = 'k', edgecolors = 'k')
+
+    for key, value in phages_dict.items():
+
+        size_phage = pop_array[t_ind, max_m + 1 + key]
+        size_bac = pop_array[t_ind, 1 + key]
+
+        if size_phage > 0 or size_bac > 0:
+
+            #print(key, value["parents"])
+
+            # possibly also check if multiple mutations have happened at that time? Then plot two lines?
+            # i.e. len(np.unique(parent_ids[:parent_ind]))
+
+            shortest_distance = np.min(distance_matrix[key, :m_init])
+            angle_chain = []
+            total_distance = 0
+            spreads = []
+
+            phage = key
+            parent_phage = phage
+            time2 = time
+
+            while parent_phage > m_init-1: # continue following back
+                mutation_ts = phages_dict[phage]["mutation_times"] # get all the mutations that have happened
+                possible_parent_inds = np.where(np.array(mutation_ts) < time2/(g*c0))[0] # get all the indices for mutations before time time2
+                possible_parent_phages, sortinds = np.unique(np.array(phages_dict[phage]["parents"])[possible_parent_inds], return_index = True) # unique parent phages
+
+                possible_parent_phages = np.array(possible_parent_phages, dtype = 'int')[np.argsort(sortinds)] # get possible parents in the order in which they happened
+                #parent_pop_sizes = pop_array[t_ind, max_m +1 : 2*max_m + 1][possible_parent_phages] # get phage populations for parents
+                #parent_phage = possible_parent_phages[np.nonzero(parent_pop_sizes)[0][0]]
+                parent_phage = possible_parent_phages[0]
+                parent_ind = np.sort(sortinds)[0]
+                distance_from_parent = phages_dict[phage]["parent_distance"][parent_ind]
+                mutation_pos = (phages_dict[phage]["mutation_position"][parent_ind] + position_offset)%30
+                mutation_pos = mutation_pos[0] # in case of double mutant - this is crude, FIX THIS
+                angle_chain.append(mutation_pos)
+                total_distance += distance_from_parent
+                phage = parent_phage
+                time2 = mutation_ts[int(possible_parent_inds[-1])]*g*c0
+                initial_phage_parent = parent_phage
+                if time2 > spread_change_time: # set the spread based on parent time
+                    spreads.append(spread_2)
+                else:
+                    spreads.append(spread_1)
+
+            mutation_ts = phages_dict[key]["mutation_times"]
+            possible_parent_inds = np.where(np.array(mutation_ts) < time/(g*c0))[0] # get all the indices for mutations before time time2
+            possible_parent_phages, sortinds = np.unique(np.array(phages_dict[key]["parents"])[possible_parent_inds], return_index = True) # unique parent phages
+            possible_parent_phages = np.array(possible_parent_phages, dtype = 'int')[np.argsort(sortinds)] # get possible parents in the order in which they happened
+
+            parent_phage = possible_parent_phages[0]
+            parent_ind = np.sort(sortinds)[0]
+            mutation_pos = (phages_dict[key]["mutation_position"][parent_ind] + position_offset)%30
+            mutation_pos = mutation_pos[0] # in case of double mutant - this is crude, FIX THIS
+
+            if len(angle_chain) < 2:
+                parent_angle = 0
+                angle = angle_chain[-1] * (360/L) * np.pi / 180
+
+            else:
+                # calculate angle from angle_chain
+                parent_angle = angle_chain[-1] * (360/L) * np.pi / 180
+                angle = parent_angle - (spreads[-1]/2 )* np.pi / 180 + angle_chain[-2]*(spreads[-1]/30)*np.pi / 180 
+
+                for j, a in enumerate(angle_chain[::-1][2:]):
+                    parent_angle = angle
+                    angle = parent_angle - (spreads[::-1][2:][j]/2 )* np.pi / 180 + a*(spreads[::-1][2:][j]/30)*np.pi / 180 
+                    #print(parent_angle, angle)
+
+            if parent_angle == 0:
+                colour = colours1[int(mutation_pos)]
+            else:
+                colour_centre = parent_angle/(2*np.pi)
+                colours2 = cm.hsv(np.linspace(colour_centre-colour_spread/total_distance,colour_centre+colour_spread/total_distance,30))
+                colour = colours2[mutation_pos]
+
+            initial_phage_pos_x = center_positions_x[initial_phage_parent]
+            initial_phage_pos_y = center_positions_y[initial_phage_parent]
+
+            ax0.scatter(length*total_distance*np.cos(angle) + initial_phage_pos_x, 
+                        length*total_distance*np.sin(angle) + initial_phage_pos_y, s = scale*np.log(size_phage+1),
+                           c = colour.reshape(1,-1), edgecolors='k')
+
+            ax1.scatter(length*total_distance*np.cos(angle) + initial_phage_pos_x, 
+                        length*total_distance*np.sin(angle) + initial_phage_pos_y, s = scale*np.log(size_bac+1),
+                           c = colour.reshape(1,-1), edgecolors='k')
+
+            # connect with lines
+            size_parent_phage = pop_array[t_ind, max_m + 1 + parent_phage]
+            if size_parent_phage > 0:
+                ax0.plot([length*(total_distance-1)*np.cos(parent_angle) + initial_phage_pos_x, 
+                          length*total_distance*np.cos(angle) + initial_phage_pos_x], 
+                     [length*(total_distance-1)*np.sin(parent_angle) + initial_phage_pos_y, 
+                      length*total_distance*np.sin(angle) + initial_phage_pos_y], 'k-', alpha = transparency)
+            
+            size_parent_bac = pop_array[t_ind, 1 + parent_phage]
+            if size_bac > 0 and size_parent_bac > 0:        
+                ax1.plot([length*(total_distance-1)*np.cos(parent_angle) + initial_phage_pos_x, 
+                      length*total_distance*np.cos(angle) + initial_phage_pos_x], 
+                     [length*(total_distance-1)*np.sin(parent_angle)+ initial_phage_pos_y, 
+                      length*total_distance*np.sin(angle)+ initial_phage_pos_y],
+                         'k-', alpha = transparency)
+        else:
+            colour = 'grey' # plot extinct clones in grey
+            
+        # plot clone size
+        if clone_plot == True:
+            if time > time_window:
+                nvi = pop_array[t_ind_0:t_ind, 1 + max_m + key].toarray().flatten()
+                nbi = pop_array[t_ind_0:t_ind, 1+ key].toarray().flatten()
+            else:
+                nvi = pop_array[:t_ind, 1 + max_m + key].toarray().flatten()
+                nbi = pop_array[:t_ind, 1+ key].toarray().flatten()
+            
+            if np.any(nvi > 1): # don't plot size 1 clones to save RAM
+                ax2.plot(times, nvi, color = colour, alpha = 0.7)
+            if np.any(nbi > 1): # don't plot size 1 clones to save RAM
+                ax3.plot(times, nbi, color = colour, alpha = 0.7)
+
+
+    if clone_plot == True:
+        ax2.legend(loc = 'upper left', fontsize = 18)
+        
+    fig.suptitle('Time = %s generations' %time, fontsize=20)
+    plt.savefig("frames/frame_%04d.png" % (i,), dpi = 60, facecolor = 'white')
+    plt.close()
+
+# +
+# use ffmpeg to generate gif and movie
+
+# generate palette for all the colours so the colours aren't distorted
+# !yes | ffmpeg -pattern_type glob -i 'frames/*.png' -vf palettegen palette.png
+
+# +
+# make gif
+if clone_plot == True:
+    gif_name = 'mutations_gif_%s_clonesize' %(timestamp)
+else:
+    gif_name = 'mutations_gif_%s_full' %(timestamp)
+
+# !yes | ffmpeg -framerate 10 -pattern_type glob -i 'frames/*.png' -i palette.png -lavfi paletteuse "$gif_name".gif
+
+# +
+# make mp4
+if clone_plot == True:
+    gif_name = 'mutations_gif_%s_clonesize' %(timestamp)
+else:
+    gif_name = 'mutations_gif_%s_full' %(timestamp)
+
+# !yes | ffmpeg -framerate 10 -pattern_type glob -i 'frames/*.png' -i palette.png -lavfi paletteuse "$gif_name".mp4
+# -
+
+# ### Stochastic extinction
 
 grouped_data_multisample = extinction_df_grouped[extinction_df_grouped['bac_extinct']['count'] > 3]
 
