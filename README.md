@@ -2,13 +2,15 @@
 
 Welcome to the repository of simulation and figure code for the paper "[Dynamics of Immune Memory and Learning in Bacterial Communities](https://doi.org/10.1101/2022.07.07.498272)". This work is a model of interacting bacteria and phage with CRISPR, and a preprint can be found on bioRxiv: [10.1101/2022.07.07.498272](https://doi.org/10.1101/2022.07.07.498272).
 
-This repository contains the code and data used to generate all main text figures and some supplementary figures. The [Index](https://github.com/mbonsma/CRISPR-dynamics-model#index) describes all the included files and data, the [Simulation pipeline](https://github.com/mbonsma/CRISPR-dynamics-model#simulation-pipeline) section describes the steps of running and analyzing the simulations, and the [Description of simulation files](https://github.com/mbonsma/CRISPR-dynamics-model#description-of-simulation-files) describes the structure of resulting simulation data.
+This repository contains the code and data used to generate all main text figures and some supplementary figures. The [Index](https://github.com/mbonsma/CRISPR-dynamics-model#index) describes all the included files and data, the [Simulation pipeline](https://github.com/mbonsma/CRISPR-dynamics-model#simulation-pipeline) section describes the steps of running and analyzing the simulations, and the [Description of simulation files](https://github.com/mbonsma/CRISPR-dynamics-model#description-of-simulation-files) describes the structure of resulting simulation data. 
+This repository also includes intermediate summary data for simulations and for previously published genetic data used in this study.
+All raw simulation data is available on Dryad.
 
 ## Index
 
 ### Figure generation scripts
 
-All data-based figures in the main text can be generated from the following files. Figures 1 and 4 in the main text are assembled in Inkscape, and Figure 6 has text annotations added in Inkscape; all other figures are generated exactly as presented in the paper with the following scripts. Each script can be run by navigating to the `code` folder and typing `python script_name.py`; for example `python diversity_figure.py` to generate Figure 2 and associated supplementary figures. Not all supplementary figures are included in this code.
+All data-based figures in the main text can be generated from the following files. Figures 1 and 4 in the main text are assembled in Inkscape, and Figure 6 has text annotations added in Inkscape; all other figures are generated exactly as presented in the paper with the following scripts. Each script can be run by cloning or downloading this repository, navigating to the `code` folder, and typing `python script_name.py` in a terminal; for example `python diversity_figure.py` to generate Figure 2 and associated supplementary figures. Not all supplementary figures are included in this code.
 
 * Figure 1: [simulation_results_figure.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/simulation_results_figure.py)
 * Figure 2: [diversity_figure.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/diversity_figure.py)
