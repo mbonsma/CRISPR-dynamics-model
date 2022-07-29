@@ -27,10 +27,10 @@ The source data is publicly available in the NCBI Sequence Read Archive under th
 * [spacer_finder.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_finder.md): Jupyter notebook code for detecting matches to CRISPR repeats, extracting spacers from raw reads, clustering spacers, and analyzing protospacers. Some steps of the pipeline are performed on the supercomputer cluster [Niagara](https://docs.scinet.utoronto.ca/index.php/Niagara_Quickstart), specifically blasting spacer sequences against all reads and processing protospacer hits using [process_protospacers_niagara.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/process_protospacers_niagara.py).
   * Note: scripts and instructions for running command-line blast on the supercomputer can be found in my [PhD-materials repository](https://github.com/mbonsma/PhD-materials).
 * [spacer_sorter.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_sorter.md): count unique spacers and protospacers, cluster all spacers and protospacers with different grouping thresholds.
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/get_read_counts.py
+* [get_read_counts.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/get_read_counts.py): process BLAST data to count the total number of reads that match the phage or bacteria genome.
 * [process_protospacers_niagara.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/process_protospacers_niagara.py): process results of blasting all spacers against all reads. First remove any hits that match to the bacteria genome or match to the CRISPR1 repeat (the CRISPR3 repeat was not checked, but $<0.1\%$ of reads matched the CRISPR3 repeat and neither the bacterial genome or the CRISPR1 repeat). The lowest e-value hit from each spacer type to each read was kept, and 10 nt downstream were extracted to analyze the presence of PAM sequences.
 * [process_protospacers_niagara_setup.sh](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/process_protospacers_niagara_setup.sh): create folders and scripts for parallel processing of protospacers on the supercomputer.
-* [Banfield_spacer_correlations.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/Banfield_spacer_correlations.md) - Jupyter notebook to analyze and group spacers and protospacers - produces the data in [data/PaezEspino2015](https://github.com/mbonsma/CRISPR-dynamics-model/tree/main/data/PaezEspino2015) and supplementary plots.
+* [Banfield_spacer_correlations.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/Banfield_spacer_correlations.md): Jupyter notebook to analyze and group spacers and protospacers - produces the data in [data/PaezEspino2015](https://github.com/mbonsma/CRISPR-dynamics-model/tree/main/data/PaezEspino2015) and supplementary plots.
 
 ### Processing data from [Guerrero et al. 2021](https://pubmed.ncbi.nlm.nih.gov/33067586/)
 
@@ -45,7 +45,7 @@ The source data for this section is publicly available in the NCBI Sequence Read
 The source data for this section is publicly available in the NCBI Sequence Read Archive under the accession [PRJNA268031](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA268031). 
 
 * [spacer_finder_Burstein.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_finder_Burstein.md): Jupyter notebook code based on [spacer_finder.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_finder.md) to detect spacers from raw reads.
-* [spacer_sorter_Burstein.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_sorter_Burstein.md): : Jupyter notebook code based on [spacer_sorter.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_sorter.md) to cluster spacers and protospacers with different grouping thresholds.
+* [spacer_sorter_Burstein.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_sorter_Burstein.md): Jupyter notebook code based on [spacer_sorter.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_sorter.md) to cluster spacers and protospacers with different grouping thresholds.
 
 ### Simulation scripts
 
@@ -58,21 +58,25 @@ The source data for this section is publicly available in the NCBI Sequence Read
 
 ### Simulation processing scripts
 
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/data_download.sh
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/extinction_df.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/get_sims_to_analyze.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/predict_diversity.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/sim_analysis_functions.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_model_plotting_functions.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/simulation_stats.py
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/simulation_stats.sh
-* https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/sort-sims.md
+* [data_download.sh](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/data_download.sh): bash script to download newly completed simulations from a server
+* [sort-sims.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/sort-sims.md): process raw simulation results to create a sparse array of clone abundance over time (`pop_array_timestamp.npz`).
+* [get_sims_to_analyze.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/get_sims_to_analyze.py): create a list of simulations that have not been analyzed with `simulation_stats.py` to be added to `all_data.csv`.
+* [simulation_stats.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/simulation_stats.py): calculate summary quantities for simulations and store in the dataframe `all_data.csv`.
+* [simulation_stats.sh](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/simulation_stats.sh): bash helper script to run `simulation_stats.py`.
+* [extinction_df.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/extinction_df.py): analyze simulations that end in extinction and create `extinction_df.csv`.
+* [predict_diversity.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/predict_diversity.py): numerically calculate predicted clone diversity based on simulation parameters, create summary dataframe `grouped_data.csv`.
+* [sim_analysis_functions.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/sim_analysis_functions.py): functions used in simulation processing.
+* [spacer_model_plotting_functions.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/spacer_model_plotting_functions.py): functions used in simulation processing and visualization.
 
 ### Data
 
-- `all_data.csv` - processed simulation statistics in tabular format, created with `simulation_stats.py`
-- `grouped_data.csv` - processed simulation statistics in tabular format, created with `predict_diversity.py`
-- `extinction_df.csv` - processed simulation statistics relating to extinction, created with `extinction_df.py` 
+* [all_data.csv](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/data/all_data.csv): processed simulation statistics in tabular format, created with `simulation_stats.py`
+* [grouped_data.csv](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/data/grouped_data.csv): processed simulation statistics in tabular format, created with `predict_diversity.py`
+* [extinction_df.csv](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/data/extinction_df.csv): processed simulation statistics relating to extinction, created with `extinction_df.py`
+* [PaezEspino2015](https://github.com/mbonsma/CRISPR-dynamics-model/tree/main/data/PaezEspino2015): detected spacers and protospacers in data from Paez-Espino et al. 2015. The folders `perfect_PAM`, `partial_PAM`, and `no_PAM` contain protospacers with either a perfect CRISPR1 or CRISPR3 PAM, a partial truncated match to a PAM, or all results regardless of PAM respectively.
+* [Burstein2016](https://github.com/mbonsma/CRISPR-dynamics-model/tree/main/data/Burstein2016): detected spacers and protospacers in data from Burstein et al. 2016. 
+* [Guerrero2021](https://github.com/mbonsma/CRISPR-dynamics-model/tree/main/data/Guerrero2021): detected spacers and protospacers in data from Guerrero et al. 2021. The folders `perfect_PAM`, `partial_PAM`, and `no_PAM` contain protospacers with either a perfect PAM, a partial truncated match to the PAM, or all results regardless of PAM respectively.
+* `date/`: dated folders contain selected simulation data used to generate main text figures.
 
 ## Simulation pipeline - data processing & analysis
 
