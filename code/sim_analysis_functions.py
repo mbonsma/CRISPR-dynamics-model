@@ -56,71 +56,10 @@ def remove_zeros(x,m):
         m -= len(zero_inds)
         return x, m
 
-def remove_zeros_pop_array(pop_array, max_m, all_phages, phage_size_cutoff = 0):
-    """
-    Remove empty entries in a block of simulation data, i.e. if there are no bacteria or phage at that index
-    during that time range.
-    
-    Inputs:
-    pop_array: array of dimension (time_indices, 2*max_m + 3) (not sparse format)
-    pop_array[:,0] = nb0, pop_array[:,1:m+1] = nbi, pop_array[:, m+1:2*m+1] = nvi, 
-    pop_array[:,2*m+1] = C, pop_array[:,2*m + 2] = time  
-    max_m: number of unique phage species in the population over all time
-    phage_size_cutoff: size of phage clone below which to exclude (inclusive) if bacteria is 0 
-    
-    Returns:
-    pop_array, m, and all_phages after removing columns corresponding to phage and bacteria all being zero. 
-    """
-    
-    nbi = pop_array[:,1:max_m+1]
-    nvi = pop_array[:,max_m+1:2*max_m+1]
-    
-    # get nonzero columns
-    nonzero = np.logical_or(nvi > phage_size_cutoff, nbi != 0)
-    
-    # subset nbi and nvi
-    new_nbi = nbi[:, np.any(nonzero, axis = 0)]
-    new_nvi = nvi[:, np.any(nonzero, axis = 0)]
-    
-    new_all_phages = np.array(all_phages)[np.any(nonzero, axis = 0)]
-
-    new_max_m = np.sum(np.any(nonzero, axis = 0))
-    
-    new_pop_array = np.concatenate([pop_array[:,0, np.newaxis], new_nbi, new_nvi, pop_array[:, -2:]], axis = 1)
-    
-    return new_pop_array, new_max_m, new_all_phages
-
 def find_nearest(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx
-
-def find_nearest_below(array, value):
-    """
-    Return the index of the element that is nearest to `value` but lower than `value`
-    array must be sorted for this to work
-    """
-    return(np.argmax((array > value)[1:] > (array > value)[:-1]))
-    
-def create_all_phages(data, phages):
-    """
-    Creates a list of all the unique phages that were ever present in the simulation
-    
-    Inputs: 
-    data: file object created from reading "populations.txt" with readlines()
-    phages: file object created from reading "protospacers.txt" with readlines()
-    
-    Output: list of all unique phages in the simulation
-    """
-    all_phages = []
-
-    for count, row in enumerate(data):
-        phage_list = recreate_phage(phages[count]) 
-
-        for ind, phage in enumerate(phage_list): # for each phage sequence, track its abundace
-            if phage not in all_phages:
-                all_phages.append(phage)
-    return all_phages
 
 def create_pop_array(data, all_phages, phages):
     """
@@ -198,111 +137,11 @@ def create_pop_array(data, all_phages, phages):
     
     return pop_array, max_m
         
-
-
-
 def PV(i,j, pv, e):
     if i == j:
         return pv*(1-e)
     else:
         return pv
-
-def PV_matrix(pv, e, m):
-    pv_matrix = np.ones((m,m))
-    pv_matrix *= pv
-    pv_matrix[np.identity(m, dtype = bool)] = pv*(1-e)
-    
-    return pv_matrix
-
-def nvdot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha):
-    """
-    nbi and nvj are vectors of length m with the population sizes of spacers and protospacers
-    """
-    
-    nv = np.sum(nvj)
-    nbs = np.sum(nbi)
-    
-    pv_matrix = PV_matrix(pv, e, len(nbi))
-    pva_term = np.sum(pv_matrix*np.outer(nbi,nvj))
-        
-    return -(F + alpha*(nb0 + nbs))*nv + alpha*B*(pv*nb0*nv + pva_term)
-
-def nb0dot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha):
-    """
-    nbi and nvj are vectors of length m with the population sizes of spacers and protospacers
-    """
-    
-    nv = np.sum(nvj)
-    nbs = np.sum(nbi)
-    
-    return (g*C - F)*nb0 - alpha*pv*nb0*nv - alpha*(1-pv)*eta*nb0*nv + r*nbs
-
-def nbsdot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha):
-    """
-    nbi and nvj are vectors of length m with the population sizes of spacers and protospacers
-    """
-    
-    nv = np.sum(nvj)
-    nbs = np.sum(nbi)
-    
-    pv_matrix = PV_matrix(pv, e, len(nbi))
-    pva_term = np.sum(pv_matrix*np.outer(nbi,nvj))
-    
-    return (g*C - F - r)*nbs + alpha*eta*nb0*nv*(1-pv) - alpha*pva_term
-
-def cdot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha):
-    
-    return F*(c0-C) - g*C*(nb0 + np.sum(nbi))
-
-def nbidot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha, i):
-    """
-    nbi and nvj are vectors of length m with the population sizes of spacers and protospacers
-    
-    Gives the rate of growth for the ith spacer type
-    """
-        
-    pv_vector = np.ones(len(nvj))*pv
-    pv_vector[i] = pv*(1-e)
-    
-    pva_term = np.sum(pv_vector*nbi[i]*nvj)
-    
-    return (g*C - F - r)*nbi[i] + alpha*eta*nb0*nvj[i]*(1-pv) - alpha*pva_term
-
-def nvjdot(nb0, nbi, nvj, C, F, r, g, c0, B, pv, e, eta, alpha, j):
-    """
-    nbi and nvj are vectors of length m with the population sizes of spacers and protospacers
-    
-    Gives the rate of growth for the jth protospacer type
-    """
-        
-    nbs = np.sum(nbi)
-    
-    pv_vector = np.ones(len(nvj))*pv
-    pv_vector[j] = pv*(1-e)
-    
-    pva_term = np.sum(pv_vector*nvj[j]*nbi)
-        
-    return -(F + alpha*(nb0 + nbs))*nvj[j] + alpha*B*(pv*nb0*nvj[j] + pva_term)
-    
-def sum_positions_vec(n_i,max_abund):
-    """
-    Takes a vector where each position is a spacer type and each value is an abundance
-    returns the (non-cumulative) frequency distribution from lowest abundance to highest abundance.
-    """
-    d = np.zeros((int(max_abund)+1))    
-    count = 0
-    for i in range(len(n_i)):
-        v = int(n_i[i])
-        if v != 0:
-            d[v] += 1
-            count += 1
-    # normalize by first value
-    #norm_val = d[1]
-    #d_normed = []
-    #for ind in range(len(d)):
-    #    d_normed.append(d[ind]/norm_val)
-        
-    return d
     
 def recreate_parent_list(parent_row):
     """
