@@ -19,78 +19,6 @@ def running_mean(x, N):
     """
     cumsum = np.cumsum(np.insert(x, 0, 0)) 
     return (cumsum[N:] - cumsum[:-N]) / float(N)
-
-def zfun(p,B,pv0,f):
-    """
-    Steady state solution for z without CRISPR
-    """
-    return p*(B-1/pv0)/(1+p*(B-1/pv0))
-
-def yfun(p,B,pv0,f):
-    """
-    Steady state solution for y without CRISPR
-    """
-    return (B*p-p/pv0-f*(B*p-p/pv0+1))/(p*(B*p-p/pv0+1))
-
-def xfun(p,B,pv0,f):
-    """
-    Steady state solution for x without CRISPR
-    """
-    return f/(B*p-p/pv0)
-
-def xi_sigmoid(xiH,xiL,xR,n,x):
-    """
-    returns 1-xi = e as a function of x
-    """
-    return xiL + (xiH-xiL)*((x**n)/(x**n+xR**n))
-
-def table_to_contour(vals_array):
-    """
-    Input: n x 3 array with columns 1 and 2 x-y coordinates and column 3 contour height
-    Output: xvals, yvals, zvals, formatted for the 'contour' function 
-    """
-    xvals = vals_array[:,0] # first column
-    yvals = vals_array[:,1] # second column
-    zvals = vals_array[:,2] # third column
-
-    xdim = len(np.unique(xvals)) # number of unique xcoords
-    ydim = len(np.unique(yvals)) # number of unique ycoords
-
-    xvals = np.reshape(xvals,(xdim,ydim))
-    yvals = np.reshape(yvals,(xdim,ydim))
-    zvals = np.reshape(zvals,(xdim,ydim))
-    
-    return xvals, yvals, zvals 
-    
-def lineslice(vals_array,param_slice):
-    """
-    vals_array is in rows of (xi, param, variable)
-    
-    param_slice is the value on the y axis that you want to take a slice at. 
-    It can be approximate, this function will find the closest point to it.
-    """
-    xaxis = np.unique(vals_array[:,0]) # take the unique xi coordinates
-    idx = np.argmin(np.abs(vals_array[:,1]-param_slice))
-    param = vals_array[idx,1]
-    inds = np.where(vals_array[:,1]==param)
-    plotvals = vals_array[inds,2][0]
-    
-    return xaxis, plotvals, param
-
-def lineslice_vert(vals_array,param_slice):
-    """
-    vals_array is in rows of (xi, param, variable)
-    
-    param_slice is the value of xi on the x axis that you want to take a slice at. 
-    It can be approximate, this function will find the closest point to it.
-    """
-    idx = np.argmin(np.abs(vals_array[:,0]-param_slice))
-    param = vals_array[idx,0]
-    inds = np.where(vals_array[:,0]==param)
-    plotvals = vals_array[inds,2][0]
-    yaxis = vals_array[inds,1][0]
-    
-    return yaxis, plotvals, param
     
 def cubsol3(a,b,c,d):
     """
@@ -270,153 +198,6 @@ def nbi_growth(nbi, nvi, nb, nb0, nv, C, f, R, g, c0, alpha, e, pv, eta):
         
     return s/(g*c0) # per bacterial generation
 
-# ------------- mean field equations with phage mutations -----------
-
-def nvdot(nv, nb0, nbs, e_effective, F, alpha, B, pv):
-    """
-    Calculates the rate of change in minutes for the total phage population, nv.
-    Note that this assumes CRISPR immunity is only present for exactly matching clones.
-    
-    Inputs:
-    nv : total phage population size at time t
-    nb0 : number of bacteria without spacers at time t
-    nbs : number of bacteria with spacers at time t
-    e_effective: average overlap between bac and phage populations
-    F : chemostat flow rate
-    alpha : phage adsorption rate
-    B : phage burst size
-    pv : probability of phage infection success without CRISPR
-    """
-    pva = pv*(1-e_effective)
-    return -(F + alpha*(nb0+nbs))*nv + alpha*B*pv*nb0*nv + alpha*B*nbs*nv*pva
-
-
-def nbdot(nv, nb0, nbs, C, e_effective, F, g, alpha, pv):
-    """
-    Calculates the rate of change in minutes for the total bacterial population.
-    
-    Inputs:
-    nv : total phage population size at time t
-    nb0 : number of bacteria without spacers at time t
-    nbs : number of bacteria with spacers at time t
-    C : nutrient concentration at time t
-    e_effective: average overlap between bac and phage populations
-    F : chemostat flow rate
-    g : bacterial growth rate
-    alpha : phage adsorption rate
-    pv : probability of phage infection success without CRISPR
-    """
-    nb = nbs + nb0
-    pva = pv*(1-e_effective)
-    return (g*C - F)*nb - alpha*nv*(pva*nbs + pv*nb0)
-
-def nbsdot(nv, nb0, nbs, C, e_effective, F, g, alpha, pv, r, eta):
-    """
-    Calculates the rate of change in minutes for the number of bacteria with spacers.
-    
-    Inputs:
-    nv : total phage population size at time t
-    nb0 : number of bacteria without spacers at time t
-    nbs : number of bacteria with spacers at time t
-    C : nutrient concentration at time t
-    e_effective: average overlap between bac and phage populations
-    F : chemostat flow rate
-    g : bacterial growth rate
-    alpha : phage adsorption rate
-    pv : probability of phage infection success without CRISPR
-    r : rate of spacer loss
-    eta : probability of bacterial spacer acquisition
-    """
-    
-    pva = pv*(1-e_effective)
-    return (g*C - F - r)*nbs + alpha*(1-pv)*eta*nb0*nv - alpha*nv*pva*nbs
-
-def nb0dot(nv, nb0, nbs, C, e_effective, F, g, alpha, pv, r, eta):
-    """
-    Calculates the rate of change in minutes for the number of bacteria with spacers.
-    
-    Inputs:
-    nv : total phage population size at time t
-    nb0 : number of bacteria without spacers at time t
-    nbs : number of bacteria with spacers at time t
-    C : nutrient concentration at time t
-    e_effective: average overlap between bac and phage populations
-    F : chemostat flow rate
-    g : bacterial growth rate
-    alpha : phage adsorption rate
-    pv : probability of phage infection success without CRISPR
-    r : rate of spacer loss
-    eta : probability of bacterial spacer acquisition
-    """
-    
-    return (g*C - F)*nb0 + r*nbs - alpha*pv*nb0*nv - alpha*(1-pv)*eta*nb0*nv
-
-def cdot(C, nb, F, c0, g):
-    """
-    Inputs:
-    C : nutrient concentration at time t
-    nb : total bacteria population size at time t
-    F : chemostat flow rate
-    c0 : initial nutrient concentration
-    g : bacterial growth rate
-    """
-    return F*(c0-C) - g*C*nb
-
-def nvidot(nv, nb, nvi, nbi, F, alpha, B, pv, e, mu):
-    """
-    Calculates the rate of change in minutes for an individual phage clone.
-    This ignores mutations into this phage type (low rate).
-    
-    Inputs:
-    nv : total phage population size at time t
-    nb : total bacteria population size at time t
-    nvi : abundance of a single phage clone (not a vector)
-    nbi : abundance of corresponding bacteria clone (not a vector)
-    F : chemostat flow rate
-    alpha : phage adsorption rate
-    B : phage burst size
-    pv : probability of phage infection success without CRISPR
-    e : relative immunity provided by CRISPR (0 to 1)
-    mu : phage mutation rate
-    """
-    L = 30 # protospacer length
-    P0 = np.exp(-mu*L)
-    return -(F + alpha*nb)*nvi + alpha*B*P0*pv*nvi*(nb - e*nbi)
-
-
-def nbidot(nv, C, nb0, nvi, nbi, F, g, alpha, pv, e, r, eta):
-    """
-    Calculates the rate of change in minutes for an individual phage clone.
-    This ignores mutations into this phage type (low rate).
-    
-    Inputs:
-    nv : total phage population size at time t
-    C : nutrient concentration at time t
-    nb0 : number of bacteria without spacers at time t
-    nvi : abundance of a single phage clone (not a vector)
-    nbi : abundance of corresponding bacteria clone (not a vector)
-    F : chemostat flow rate
-    g : bacterial growth rate
-    alpha : phage adsorption rate
-    pv : probability of phage infection success without CRISPR
-    e : relative immunity provided by CRISPR (0 to 1)
-    r : rate of spacer loss
-    eta : probability of bacterial spacer acquisition
-    """
-
-    return (g*C - F - r)*nbi - alpha*pv*nbi*(nv - e*nvi) + alpha*eta*nb0*nvi*(1 - pv)
-
-def timestep(nb0,nbs,nv,nb,C,nvi,nbi,dt, e_effective, F, g, c0, alpha, pv, r, eta, B, mu, e):
-    nb = nb0 + nbs
-    nb0_new = nb0 + nb0dot(nv, nb0, nbs, C, e_effective, F, g, alpha, pv, r, eta)*dt
-    nbs_new = nbs + nbsdot(nv, nb0, nbs, C, e_effective, F, g, alpha, pv, r, eta)*dt
-    nv_new = nv + nvdot(nv, nb0, nbs, e_effective, F, alpha, B, pv)*dt
-    c_new = C + cdot(C, nb, F, c0, g)*dt
-    nvi_new = nvi + nvidot(nv, nb, nvi, nbi, F, alpha, B, pv, e, mu)*dt
-    nbi_new = nbi + nbidot(nv, C, nb0, nvi, nbi, F, g, alpha, pv, e, r, eta)*dt
-
-    return (nb0_new, nbs_new, nv_new, c_new, nvi_new, nbi_new)
-
 def nvi_nbi_ode(t, y, mean_nb, mean_nv, mean_C, mean_nb0, f, g, c0, e, alpha, B, mu, pv, R, eta):
     """
     Calculates the rate of change in minutes for an individual phage clone.
@@ -432,16 +213,6 @@ def nvi_nbi_ode(t, y, mean_nb, mean_nv, mean_C, mean_nb0, f, g, c0, e, alpha, B,
     P0 = np.exp(-mu*L)
     return [-(F + alpha*mean_nb)*y[0] + alpha*B*P0*pv*y[0]*(mean_nb - e*y[1]), 
             (g*mean_C - F - r)*y[1] - alpha*pv*y[1]*(mean_nv - e*y[0]) + alpha*eta*mean_nb0*y[0]*(1 - pv)]
-
-def z_ode(t, y, p, B):
-    """
-    Solving the regular P0 equation using the ODE solver
-    
-    t : time to solve at
-    y : y[0] = zeta(t)
-    """
-
-    return 1 - p + p*y[0]**B - y[0]
 
 def zeta_nbi_nvi_ode(t, y, nb, C, nv, nb0, nbi_ss, f, g, c0, alpha, B, pv, e, R, eta, mu, nbi_norm = True):
     """
@@ -486,80 +257,6 @@ def zeta_nbi_nvi_ode(t, y, nb, C, nv, nb0, nbi_ss, f, g, c0, alpha, B, pv, e, R,
     dzeta = (beta + delta)*(1/(s + 2) + y[2]**B * (s + 1)/(s + 2) - y[2])
      
     return dnvi, dnbi, dzeta
-
-def numerical_nvi_nbi(mean_nb, mean_nv, mean_nb0, mean_C, nvi_ss, f, g, c0, alpha, B, pv, e, mu, R, eta, 
-                      dt = 0.1, n_iter = 50000000, epsilon = 10**-1):
-    """
-    Inputs:
-    mean_nb : mean steady state bacteria population (either from sim or e/m)
-    mean_nv : mean steady state phage population (either from sim or e/m)
-    mean_C : mean steady state nutrient concentration 
-    mean_nb0 : mean steady state number of bacteria without spacers
-
-    F, g, c0, alpha, B, pv, e, mu, r, eta : simulation parameters
-    dt : numerical solution timestep
-    n_iter : number of iterations for numerical solution
-
-    Returns:
-    timevec : timecourse for numerical solution (bacterial generations)
-    nvi_vec : numerical mean phage clone size over time
-    nbi_vec : numerical mean bacteria clone size over time
-    """
-    
-    F = f*g*c0
-    r = R*g*c0
-    
-    # initial clone sizes
-    nvi = 1
-    nbi = 0
-
-    nvi_vec = [nvi]
-    nbi_vec = [nbi]
-    timevec = [0]
-    
-    for i in range(1, n_iter):
-        nvi_new = nvi + nvidot(mean_nv, mean_nb, nvi, nbi, F, alpha, B, pv, e, mu)*dt
-        nbi_new = nbi + nbidot(mean_nv, mean_C, mean_nb0, nvi, nbi, F, g, alpha, pv, e, r, eta)*dt
-        if i%500 == 0:
-            nvi_vec.append(nvi_new)
-            nbi_vec.append(nbi_new)
-            timevec.append(dt*(i+1)*g*c0)
-            if i > n_iter / 100: # make sure it runs for at least that long
-                if i%10000 == 0:   
-                    if np.abs(1 - (np.mean(nvi_vec[-500:]) / nvi_ss)) < epsilon:
-                        break
-        
-        nvi = nvi_new
-        nbi = nbi_new
-        
-    return timevec, nvi_vec, nbi_vec
-
-def nbi_t_analytic(n0, nv, C, nb0, nvi_ss, g, c0, f, R, alpha, pv, e, eta, times):
-    
-    """
-    solve nbi equation analytically for 1D assumption that nvi is nvi_ss
-    n0 : initial clone size
-    times : in bacterial generations
-    """
-    
-    F = f*g*c0
-    r = R*g*c0
-    a = g*C - F - r - alpha*pv*(nv-e*nvi_ss)
-    b = alpha*eta*nb0*nvi_ss*(1-pv)
-    
-    return n0*np.exp(a*(times/(g*c0))) + (b/a)*(np.exp(a*(times/(g*c0))) - 1)
-
-def nvi_t_analytic(nb, g, c0, f, alpha, pv, mu, B, L, times):
-    
-    """
-    solve nvi equation analytically for 1D assumption that nbi = 0
-    times : in bacterial generations
-    """
-    
-    F = f*g*c0
-    growth_rate = alpha*B*pv*np.exp(-mu*L)*nb - F - alpha*nb
-    
-    return np.exp(growth_rate*(times/(g*c0)))
 
 def get_trajectories(pop_array, nvi, nbi, f, g, c0, R, eta, alpha, e, pv, B, mu, max_m, m_init, t_ss_ind, 
                      remove_bac_nonzero = True, split_small_and_large = False, size_cutoff = 1, trim_at_max_size = False, aggressive_trim = False,
@@ -1058,50 +755,6 @@ def effective_e(nbi, nvi, all_phages, pv_type, e, theta, distance_matrix = None,
                            
     return e_effective_list
 
-def e_effective_shifted_crossreactivity(e, nbi_interp, nvj_interp, pv_type, all_phages, theta, 
-                                        max_shift = 1000, direction = 'past', distance_matrix = None, 
-                                        distance_matrix_theta = None):
-    """
-    Calculate the time-shifted average immunity between bacteria (nbi) and phage (nvj).
-    
-    Inputs:
-    e : parameter e, spacer effectiveness
-    nbi_interp : array of shape (timepoints, max_m) with interpolated bacteria clone abundances 
-	with time going down the columns and clone identity going across rows.
-    nvj_interp : array of shape (timepoints, max_m) with interpolated phage clone abundances 
-	with time going down the columns and clone identity going across rows.
-    pv_type : string describing pv(i,j) interaction type ('binary', 'exponential', 'exponential_025', or 'theta_function')
-    all_phages : list of all protospacers corresponding to the columns of pop_array
-    theta : pv theta function cutoff parameter if pv_type == 'theta_function'
-    max_shift : maximum time shift in index of nbi_interp or nvi_interp. 
-	Max shift in generations = (interp_times[1] - interp_times[0])* max_shift
-    direction : 'past' or 'future': whether to shift phages to the past or the future.
-
-    """
-    e_effective_0 = effective_e(nbi_interp, nvj_interp, all_phages, pv_type, e, theta, distance_matrix, distance_matrix_theta)
-
-    e_eff_mean = [np.nanmean(e_effective_0)]
-    e_eff_std = [np.nanstd(e_effective_0)]
-
-    if direction == 'past':
-        
-        for i in range(1, max_shift):
-            e_effective = effective_e(nbi_interp[i:], nvj_interp[:-i], all_phages, pv_type, e, theta, distance_matrix, 
-                                      distance_matrix_theta)
-
-            e_eff_mean.append(np.nanmean(e_effective))
-            e_eff_std.append(np.nanstd(e_effective))
-        
-    if direction == 'future':
-        for i in range(1, max_shift):
-            e_effective = effective_e(nbi_interp[:-i], nvj_interp[i:], all_phages, pv_type, e, theta, distance_matrix,
-                                      distance_matrix_theta)
-
-            e_eff_mean.append(np.nanmean(e_effective))
-            e_eff_std.append(np.nanstd(e_effective))
-        
-    return np.array(e_eff_mean), np.array(e_eff_std)
-
 def get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, all_phages, size_cutoff = 1, n_snapshots = 15):
     """
     Gets a size cutoff by choosing a size that gives the same mean number of phage clones
@@ -1188,35 +841,6 @@ def p_ext_virus(B, t, delta, N0):
     This is the NEUTRAL APPROXIMATION (p = 1/B)
     """
     return ((B*delta*t)/(B*delta*t + 2))**N0
-
-def p_ext_virus_phage_gens(B, t, N0):
-    """
-    An approximate solution for the probability of extinction for phage clones, valid at large t
-    t is time in phage death generations. To convert to time in minutes, multiply
-    t by delta.
-    This is the NEUTRAL APPROXIMATION (p = 1/B)
-    """
-    return ((B*t)/(B*t + 2))**N0
-
-def p_ext_virus_long_t(beta, delta, B, t, N0):
-    """
-    An approximate solution for the probability of extinction for phage clones, valid at large t
-    t is time in minutes
-    """
-    p = beta/(beta+delta)
-    s = beta*(B-1) - delta
-    
-    return ((2 - 3*B*p + p*B**2)*(1 - np.exp(s*t)) / (2 - B*p*(3- np.exp(s*t)) + p*(B**2)*(1 - np.exp(s*t))))**N0
-    
-    # version with time in phage generations instead of minutes
-    #return (((-1 + np.exp((-1 + B*p)*t))*(2 + (-3 + B)*B*p))/(-2 + B*(3 - B + (-1 + B)*np.exp((-1 + B*p)*t))*p))**N0
-
-def p_ext_virus_short_t(beta, delta, t,N0):
-    """
-    An approximate solution for the probability of extinction for phage clones, valid at short t
-    t is time in phage death generations
-    """
-    return (delta*(1-np.exp(-t))/(beta+delta))**N0
 
 def integrand(w, p, B):
     """
@@ -1563,25 +1187,7 @@ def predict_m(m, f, g, c0, alpha, B, pv, e, mu, R, eta):
     pred_m = predicted_establishment_fraction * (mutation_rate_pred / (g*c0)) * mean_T_backwards
     #pred_m = predicted_establishment_fraction * (mutation_rate_pred / (g*c0)) * mean_P0_large_s0
     
-    return pred_m, predicted_establishment_fraction, mutation_rate_pred / (g*c0), mean_T_backwards
-   
-def m_dot(m, f, g, c0, alpha, B, pv, e, mu, R, eta):
-    """
-    Calculate a predicted rate of change of m given an input m. 
-    
-    Inputs:
-    parameters, m
-    
-    Outputs: 
-    rate of change of m (in units of bacterial generations)
-    """
-    
-    mean_T_backwards = extinction_time(m, f, g, c0, alpha, B, pv, e, mu, R, eta)
-    
-    predicted_establishment_fraction = establishment_fraction(m, f, g, c0, alpha, B, pv, e, mu, R, eta)
-    mutation_rate_pred = mutation_rate(m, f, g, c0, alpha, B, pv, e, mu, R, eta)
-    
-    return predicted_establishment_fraction * (mutation_rate_pred / (g*c0)) - m/mean_T_backwards    
+    return pred_m, predicted_establishment_fraction, mutation_rate_pred / (g*c0), mean_T_backwards   
 
 def recursive_bac_m(m_vals_test, f, g, c0, alpha, B, pv, e, mu, R, eta):
     
