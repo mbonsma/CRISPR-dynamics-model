@@ -20,21 +20,13 @@ import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import seaborn as sns
-from matplotlib.lines import Line2D
-import matplotlib.cm as cm
 from scipy.integrate import quad
 
 # %matplotlib inline
 
 from spacer_model_plotting_functions import (nbi_steady_state, nvi_steady_state, analytic_steady_state,
-                                             predict_m, recursive_bac_m, extinction_time, 
-                                             establishment_fraction, mutation_rate, m_dot,
-                                             p_ext_virus, running_mean, nvi_growth,
-                                             get_clone_sizes, y_fn_nu, x_fn_nu)
-from sim_analysis_functions import load_simulation, find_nearest
-from spacer_model_plotting_functions import (bacteria_clone_backwards_extinction, 
-                                             bacteria_backwards_master_changing_nvi, bc,
-                                             nvi_nbi_ode, vec_time, bac_extinction_time_numeric)
+                                             predict_m, recursive_bac_m)
+from spacer_model_plotting_functions import (bacteria_clone_backwards_extinction, bac_extinction_time_numeric)
 
 
 def get_numeric_mean(P0_vals, time_vals, n_samples = 5000):
@@ -100,59 +92,6 @@ def recursive_bac_m_plot(m_vals_test, f, g, c0, alpha, B, pv, e, mu, R, eta, xli
     plt.savefig("m_prediction_c0_%s_eta_%s_e_%s_mu_%s_B_%s_pv_%s.png" %(c0, eta, e, mu, B, pv), dpi = 150)
     if close_fig == True:
         plt.close()
-    
-
-
-def predict_phage_m(m, f, g, c0, alpha, B, pv, e, mu, R, eta, method = "fast"):
-    """
-    Calculate a predicted m given an input m. The idea is that we can iterate until they match.
-    
-    This relies on the phage to bacteria m rescaling factor that is calculated based on the 
-    simulation phage size distribution. Ideally this can be theoretically predicted.
-    
-    Inputs:
-    parameters : simulation parameters
-    m : a test m
-    method : if method == "fast", use P0 numerical solution for s = 0. If method == "time", use time-varying s(t)
-    
-    
-    Outputs: 
-    predicted m
-    """
-
-    e_effective = e/m
-    
-    # get predicted mean field quantities
-    nb, nv, C, nu = analytic_steady_state(pv, e_effective, B, R, eta, f, c0, g, alpha)
-    nb0 = (1-nu)*nb
-    nbi_ss = float(nbi_steady_state(nb, f, g, c0, e, alpha, B, mu, pv))
-    
-    # calculate predicted mean time to extinction
-    # this one uses the numerical solution for P0(t) with a time-varying selection factor
-    end_time = 20000 /(g*c0) # use longer time for better stats
-    
-    if method == "fast":
-        
-        F = f*g*c0
-        timevec = np.arange(0, 20000, 0.2)
-        P0_s_0 = numerical_P0_t(nb, g, c0, alpha, f, B, timevec, n0 = 1)
-    
-        mean_extinction_time_pred = get_numeric_mean(P0_s_0, timevec, n_samples = 5000)
-    
-    if method == "time":
-        P0_varying_s = solve_ivp(fun=lambda t, y: zeta_nbi_nvi_ode(t, y, float(nb), float(C), float(nv), float(nb0), float(nbi_ss), 
-                            f, g, c0, alpha, B, pv, e, R, eta, mu), t_span = [0, end_time], 
-                    y0 = [1, 0, 0],  rtol = 0.000000000001)
-        mean_extinction_time_pred = get_numeric_mean(P0_varying_s.y[2], P0_varying_s.t*g*c0, n_samples = 5000)
-    
-    # predicted mutation rate
-    P0 = np.exp(-mu*L)
-    mutation_rate_pred = alpha*B*(1-P0)*pv*nv*nb*(1-nu*e_effective)
-    
-    pred_m = (mutation_rate_pred / (g*c0)) * mean_extinction_time_pred
-    
-    return pred_m
-
 
 def integrand_P0_long(t, s, B, delta, n0):
     """
