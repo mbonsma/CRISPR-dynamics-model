@@ -17,26 +17,12 @@
 
 import numpy as np
 import pandas as pd
-import os, re
-from glob import glob
+import re
 from tqdm import tqdm
-from matplotlib import pyplot as plt
-import matplotlib.cm as cm
-import matplotlib
-from scipy.integrate import quad
-from scipy import sparse
-from scipy.special import lambertw
-from itertools import compress
-from matplotlib.lines import Line2D
-import seaborn as sns
-from scipy.integrate import solve_ivp
 
-from sim_analysis_functions import recreate_x, remove_zeros, recreate_phage, find_nearest, create_all_phages, create_pop_array, sum_positions_vec
-from sim_analysis_functions import recreate_parent_list, find_nearest_below, load_simulation
+from sim_analysis_functions import find_nearest, load_simulation
 
-from spacer_model_plotting_functions import x_fn_nu, y_fn_nu, z_fn_nu
-from spacer_model_plotting_functions import (cubsol3, aterm, bterm, cterm, dterm, 
-                                             analytic_steady_state, get_clone_sizes, recursive_bac_m)
+from spacer_model_plotting_functions import get_clone_sizes
 
 # %matplotlib inline
 
