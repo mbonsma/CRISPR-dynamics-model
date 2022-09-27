@@ -23,10 +23,12 @@ import matplotlib.cm as cm
 import seaborn as sns
 from matplotlib import gridspec
 
+from spacer_model_plotting_functions import analytic_steady_state
+
 # %matplotlib inline
 
 # +
-grouped_data = pd.read_csv("../data/grouped_data.csv", 
+grouped_data = pd.read_csv("grouped_data_predicted_m_Fokker_Planck.csv", 
                            index_col = 0, header=[0,1])
 
 # remove unnamed levels
@@ -44,7 +46,7 @@ grouped_data_multisample = grouped_data[grouped_data['mean_m']['count'] > 2]
 # -
 
 # load data
-all_data = pd.read_csv("../data/all_data.csv", index_col = 0)
+all_data = pd.read_csv("all_data.csv", index_col = 0)
 
 # ## Total population size predictions with crossreactivity
 
@@ -70,20 +72,21 @@ colour = 'C0'
 shape = 'eta'
 line = 'e'
 
-colour_label = 'C_0'
-shape_label = '\eta'
-line_label = 'e'
-
 e_select = 0.95
+eta_select = 10**-4
 mu_select = 10**-6
 m_init_select = 1
+B=170
+pv=0.02
+f=0.3
+R = 0.04 # this is never varied
 data_subset = grouped_data[(grouped_data['m_init'] == m_init_select)
-                                    #& (grouped_data['e'] == e_select)
+                                    & (grouped_data['eta'] == eta_select)
                                     & (grouped_data['mu'] == mu_select)
                                     & (grouped_data['mean_m']['nanmean'] >= 1)
-                                    & (grouped_data['B'] == 170)
-                                    & (grouped_data['pv'] == 0.02)
-                                    & (grouped_data['f'] == 0.3)]
+                                    & (grouped_data['B'] == B)
+                                    & (grouped_data['pv'] == pv)
+                                    & (grouped_data['f'] == f)]
                                     #& (grouped_data['pv_type'] == 'exponential')]
 
     
@@ -174,9 +177,6 @@ for group in data_subset.groupby([colour, shape, line, 'pv_type']):
                      c = bac_colours[colour_ind],  
                alpha = 0.5, marker = markerstyles[colour_ind], mec ='k', markersize = markersize, linestyle = "None")
     
-
-
-    
 ax0.set_xscale('log')
 #ax0.set_yscale('log')
 
@@ -184,6 +184,8 @@ ax0.set_ylim(0,25)
 ax1.set_ylim(0,25)
 ax0b.set_ylim(-0.25, 1.4)
 ax1b.set_ylim(-0.25, 1.4)
+ax0.set_xlim(0.7,30)
+ax0b.set_xlim(0.7,30)
 
 ax1b.tick_params(axis='y', colors='lightseagreen')
 ax1b.yaxis.label.set_color('lightseagreen')
@@ -205,13 +207,26 @@ ax0.set_ylabel(r"Mean phage population size $/C_0$")
 ax0b.set_yticks([])
 ax1.set_yticks([])
 
+# add theoretical line
+e_effective_list = np.arange(0.0001, 0.9999, 0.01)
+c0_select = 10**4
+g = 1/(42*c0_select)
+alpha = 2*10**-2/c0_select
+analytic_steady_state_vec = np.vectorize(analytic_steady_state)
+nb, nv, C, nu = analytic_steady_state_vec(pv, e_effective_list, B, R, eta_select, f, c0_select, g, alpha)
+
+ax1b.plot(e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
+ax1.plot(e_effective_list, nv/c0_select, color = 'k', linewidth = 2)
+
+ax0b.plot(1/e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
+ax0.plot(1/e_effective_list, nv/c0_select, color = 'k', linewidth = 2)
+
 ### Establishment with crossreactivity
 
-eta_select2 = 10**-4
 mu_select = 10**-6
 m_init_select = 1
 data_subset3 = grouped_data[(grouped_data['m_init'] == m_init_select)
-                                    & (grouped_data['eta'] == eta_select2)
+                                    & (grouped_data['eta'] == eta_select)
                                    & (grouped_data['mu'] == mu_select)
                                    #& (grouped_data['C0'] == 10000)
                                     & (grouped_data['mean_m']['nanmean'] >= 1)
