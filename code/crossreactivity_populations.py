@@ -22,6 +22,17 @@ from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import seaborn as sns
 from matplotlib import gridspec
+from matplotlib.colors import ColorConverter
+import colorsys
+
+
+# from https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
+def scale_lightness(rgb, scale_l):
+    # convert rgb to hls
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    # manipulate h, l, s values and return as rgb
+    return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
+
 
 from spacer_model_plotting_functions import analytic_steady_state
 
@@ -65,6 +76,10 @@ colours = sns.color_palette("hls", len(c0_vals))
 linestyles = ['-', '--', '-.', ':', (0, (3, 5, 1, 5)),  (0, (3, 5, 1, 5, 1, 5)), (0, (3, 5, 1, 5, 3, 5)) ] 
 
 colours = cm.viridis(np.linspace(0,0.9, 4)) # for eta
+# -
+
+d_dict = {"binary": 0, "theta_function": 0, "exponential": 1, "exponential_025": 4}
+grouped_data['d'] = grouped_data['pv_type'].map(d_dict)
 
 # +
 markersize = 7
@@ -87,27 +102,78 @@ data_subset = grouped_data[(grouped_data['m_init'] == m_init_select)
                                     & (grouped_data['B'] == B)
                                     & (grouped_data['pv'] == pv)
                                     & (grouped_data['f'] == f)]
+                                    #& (grouped_data['theta'] < 2)]
                                     #& (grouped_data['pv_type'] == 'exponential')]
 
-    
-phage_colours = ['indigo', 'rebeccapurple', 'mediumpurple', 'thistle']
-bac_colours = ['darkcyan', 'lightseagreen', 'mediumturquoise', 'paleturquoise']
-pv_types = ['binary', 'exponential', 'exponential_025', 'theta_function']
-pv_type_labels = ['binary', 'permissive', 'most permissive', 'step function']
+        
+phage_colour = ColorConverter.to_rgb('rebeccapurple')
+bac_colour = ColorConverter.to_rgb('lightseagreen')
+
+theta_rgbs_phage = [scale_lightness(phage_colour, scale) for scale in list(np.linspace(0, 1.9, 4))]
+d_rgbs_phage = [scale_lightness(phage_colour, scale) for scale in [0, 0.8, 1.5]]
+
+theta_rgbs_bac = [scale_lightness(bac_colour, scale) for scale in list(np.linspace(0, 1.9, 4))]
+d_rgbs_bac = [scale_lightness(bac_colour, scale) for scale in [0, 0.8, 1.5]]
+
+d_color = ColorConverter.to_rgb("red")
+theta_color = ColorConverter.to_rgb("blue")
+theta_rgbs = [scale_lightness(theta_color, scale) for scale in list(np.linspace(0, 1.9, 4))]
+d_rgbs = [scale_lightness(d_color, scale) for scale in [0, 0.8, 1.5]]
 
 legend_elements = []
-for i in range(len(np.sort(data_subset['pv_type'].unique()))):
-    pv_type = np.sort(data_subset['pv_type'].unique())[i]
-    pv_ind = pv_types.index(pv_type)
-    legend_elements.append(Line2D([0], [0],  marker=markerstyles[pv_ind], 
-                                  label='%s' %(pv_type_labels[pv_ind]),
-                          markerfacecolor='k', markeredgecolor = 'k', alpha = 1 - ((i+1)/5),
-                                  markersize = markersize, linestyle = "None"))
+
+# add binary case
+legend_elements.append(Line2D([0], [0], marker='*',  
+                                  label=r'$\theta =0, d=0$',
+                          markerfacecolor='k',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
+for i in range(len(data_subset['d'].unique())-1):
+    legend_elements.append(Line2D([0], [0], marker=markerstyles[1],  
+                                  label='$d = %s$' %np.sort(data_subset['d'].unique())[i+1],
+                          markerfacecolor=d_rgbs[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
+for i in range(len(data_subset['theta'].unique())-1):
+    legend_elements.append(Line2D([0], [0], marker=markerstyles[0],  
+                                  label=r'$\theta = %s$' %int(np.sort(data_subset['theta'].unique())[i+1]),
+                          markerfacecolor=theta_rgbs[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
 
 legend_elements.append(Line2D([0], [0], label = 'Theory', linestyle = '-', color = 'k'))
 #legend_elements.append(Line2D([0], [0], label = 'Simulation', linestyle = '-', alpha = 0.5, color = 'grey'))
     
+# leged for phage and bacteria plot
+legend_elements2 = []
+# add binary case
+legend_elements2.append(Line2D([0], [0], marker='*',  
+                                  label=r'$\theta =0, d=0$',
+                          markerfacecolor='k',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
 
+for i in range(len(data_subset['d'].unique())-1):
+    legend_elements2.append(Line2D([0], [0], marker=markerstyles[1],  
+                                  label='$d = %s$' %np.sort(data_subset['d'].unique())[i+1],
+                          markerfacecolor=d_rgbs_phage[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
+for i in range(len(data_subset['theta'].unique())-1):
+    legend_elements2.append(Line2D([0], [0], marker=markerstyles[0],  
+                                  label=r'$\theta = %s$' %int(np.sort(data_subset['theta'].unique())[i+1]),
+                          markerfacecolor=theta_rgbs_phage[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
+
+
+legend_elements2.append(Line2D([0], [0], label = 'Theory', linestyle = '-', color = 'k'))
+#legend_elements.append(Line2D([0], [0], label = 'Simulation', linestyle = '-', alpha = 0.5, color = 'grey'))
+
+# leged for phage and bacteria plot
+legend_elements3 = []
+
+legend_elements3.append(Line2D([0], [0], marker='D',  
+                                  label='Phage',
+                          markerfacecolor='rebeccapurple',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+
+legend_elements3.append(Line2D([0], [0], marker='D',  
+                                  label='Bacteria',
+                          markerfacecolor='lightseagreen',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
+#legend_elements.append(Line2D([0], [0], label = 'Simulation', linestyle = '-', alpha = 0.5, color = 'grey'))
 
 # +
 fig = plt.figure(figsize = (10,4))
@@ -124,43 +190,57 @@ label_fontsize = 10
 
 # clone size distributions
 gs_pop = gridspec.GridSpec(1,2)
-gs_pop.update(left=0.44, right=absolute_right, bottom = absolute_bottom, top = absolute_top, wspace=0.08)
+gs_pop.update(left=0.42, right=absolute_right, bottom = absolute_bottom, top = absolute_top, wspace=0.08)
 ax0 = plt.subplot(gs_pop[0])
 ax1 = plt.subplot(gs_pop[1])
-ax0b = ax0.twinx()
-ax1b = ax1.twinx()
 
 gs_est = gridspec.GridSpec(1,1)
-gs_est.update(left=absolute_left, right=0.38, bottom = absolute_bottom, top = absolute_top)
+gs_est.update(left=absolute_left, right=0.39, bottom = absolute_bottom, top = absolute_top)
 ax2 = plt.subplot(gs_est[0])
 
 
 # population size plots
 
-for group in data_subset.groupby([colour, shape, line, 'pv_type']):
+for group in data_subset.groupby([colour, shape, line, 'theta', 'd']):
     data = group[1].sort_values(by = 'm_init')
-    if len(data) > 0:
-        colour_variable = group[0][0]
-        shape_variable = group[0][1]
-        line_variable = group[0][2]
-        pv_type = group[0][3]
+    colour_variable = group[0][0]
+    shape_variable = group[0][1]
+    line_variable = group[0][2]
+    theta = group[0][3]
+    d = group[0][4]
 
-        colour_ind = pv_types.index(pv_type)
-        shape_ind = list(np.sort(data_subset[shape].unique())).index(shape_variable)
+    theta_ind = list(np.sort(data_subset['theta'].unique())).index(theta)
+    d_ind = list(np.sort(data_subset['d'].unique())).index(d)
+        
+    if d == 0 and theta == 0:
+        marker_ind = 4
+        colour_ind = 0
+        phage_colours = theta_rgbs_phage
+        bac_colours = theta_rgbs_bac
+    elif d==0:
+        marker_ind = 0
+        colour_ind = theta_ind
+        phage_colours = theta_rgbs_phage
+        bac_colours = theta_rgbs_bac
+    elif theta == 0:
+        marker_ind = 1
+        colour_ind = d_ind
+        phage_colours = d_rgbs_phage
+        bac_colours = d_rgbs_bac
 
     ax0.errorbar(  data['mean_m']['nanmean'], 
                      data['mean_nv']['nanmean'] /data['C0'],
                         yerr = data['mean_nv']['nanstd']/data['C0'],
                         xerr = data['mean_m']['nanstd'], 
                     c = phage_colours[colour_ind], 
-               alpha = 0.5, marker = markerstyles[colour_ind], mec ='k', markersize = markersize, linestyle = "None")
+               alpha = 0.5, marker = markerstyles[marker_ind], mec ='k', markersize = markersize, linestyle = "None")
         
-    ax0b.errorbar(  data['mean_m']['nanmean'], 
+    ax0.errorbar(  data['mean_m']['nanmean'], 
                      data['mean_nb']['nanmean'] /data['C0'],
                         yerr = data['mean_nb']['nanstd']/data['C0'],
                         xerr = data['mean_m']['nanstd'], 
                     c = bac_colours[colour_ind], 
-               alpha = 0.5, marker = markerstyles[colour_ind], mec ='k', markersize = markersize, linestyle = "None")
+               alpha = 0.5, marker = markerstyles[marker_ind], mec ='k', markersize = markersize, linestyle = "None")
     
         
     ax1.errorbar(  data['e_effective']['nanmean'], 
@@ -168,44 +248,44 @@ for group in data_subset.groupby([colour, shape, line, 'pv_type']):
                         yerr = data['mean_nv']['nanstd']/data['C0'],
                         xerr = data['e_effective']['nanstd'], 
                     c = phage_colours[colour_ind],  
-               alpha = 0.5, marker = markerstyles[colour_ind], mec ='k', markersize = markersize, linestyle = "None")
+               alpha = 0.5, marker = markerstyles[marker_ind], mec ='k', markersize = markersize, linestyle = "None")
         
-    ax1b.errorbar(  data['e_effective']['nanmean'], 
+    ax1.errorbar(  data['e_effective']['nanmean'], 
                      data['mean_nb']['nanmean'] /data['C0'],
                         yerr = data['mean_nb']['nanstd']/data['C0'],
                         xerr = data['e_effective']['nanstd'], 
                      c = bac_colours[colour_ind],  
-               alpha = 0.5, marker = markerstyles[colour_ind], mec ='k', markersize = markersize, linestyle = "None")
+               alpha = 0.5, marker = markerstyles[marker_ind], mec ='k', markersize = markersize, linestyle = "None")
     
 ax0.set_xscale('log')
-#ax0.set_yscale('log')
-
-ax0.set_ylim(0,25)
-ax1.set_ylim(0,25)
-ax0b.set_ylim(-0.25, 1.4)
-ax1b.set_ylim(-0.25, 1.4)
+ax0.set_yscale('log')
+ax1.set_yscale('log')
+ax0.set_ylim(0,30)
+ax1.set_ylim(0,30)
+#ax0b.set_ylim(0, 25)
+#ax1b.set_ylim(0, 25)
 ax0.set_xlim(0.7,30)
-ax0b.set_xlim(0.7,30)
+#ax0b.set_xlim(0.7,30)
 
-ax1b.tick_params(axis='y', colors='lightseagreen')
-ax1b.yaxis.label.set_color('lightseagreen')
+#ax1b.tick_params(axis='y', colors='lightseagreen')
+#ax1b.yaxis.label.set_color('lightseagreen')
 #ax1.tick_params(axis='y', colors='rebeccapurple')
 #ax1.yaxis.label.set_color('rebeccapurple')
 #ax1.set_ylabel(r"Mean phage population size $/C_0$")
-ax1b.set_ylabel(r"Mean bacteria population size $/C_0$")
+#ax1b.set_ylabel(r"Mean bacteria population size $/C_0$")
 
 ax0.set_xlabel("Mean number of clones " +r"$m$")
 ax1.set_xlabel("Average bacterial immunity")
 
 #ax0b.tick_params(axis='y', colors='lightseagreen')
 #ax0b.yaxis.label.set_color('lightseagreen')
-ax0.tick_params(axis='y', colors='rebeccapurple')
-ax0.yaxis.label.set_color('rebeccapurple')
-ax0.set_ylabel(r"Mean phage population size $/C_0$")
+#ax0.tick_params(axis='y', colors='rebeccapurple')
+#ax0.yaxis.label.set_color('rebeccapurple')
+ax0.set_yticks([])
+ax1.yaxis.tick_right()
+ax1.yaxis.set_label_position("right")
+ax1.set_ylabel(r"Mean population size $/C_0$")
 #ax0b.set_ylabel(r"Mean bacteria population size $/C_0$")
-
-ax0b.set_yticks([])
-ax1.set_yticks([])
 
 # add theoretical line
 e_effective_list = np.arange(0.0001, 0.9999, 0.01)
@@ -215,41 +295,43 @@ alpha = 2*10**-2/c0_select
 analytic_steady_state_vec = np.vectorize(analytic_steady_state)
 nb, nv, C, nu = analytic_steady_state_vec(pv, e_effective_list, B, R, eta_select, f, c0_select, g, alpha)
 
-ax1b.plot(e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
+ax1.plot(e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
 ax1.plot(e_effective_list, nv/c0_select, color = 'k', linewidth = 2)
 
-ax0b.plot(1/e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
+ax0.plot(1/e_effective_list, nb/c0_select, color = 'k', linewidth = 2)
 ax0.plot(1/e_effective_list, nv/c0_select, color = 'k', linewidth = 2)
+
+ax0.legend(handles = legend_elements2, loc = 'lower right', bbox_to_anchor = (1,0.28))
+ax1.legend(handles = legend_elements3, loc = 'lower left', bbox_to_anchor = (0,0.4))
 
 ### Establishment with crossreactivity
 
-mu_select = 10**-6
-m_init_select = 1
-data_subset3 = grouped_data[(grouped_data['m_init'] == m_init_select)
-                                    & (grouped_data['eta'] == eta_select)
-                                   & (grouped_data['mu'] == mu_select)
-                                   #& (grouped_data['C0'] == 10000)
-                                    & (grouped_data['mean_m']['nanmean'] >= 1)
-                                    & (grouped_data['theta'] < 2)
-                                    & (grouped_data['B'] == 170)
-                                    & (grouped_data['f'] == 0.3)
-                                   & (grouped_data['pv'] == 0.02)]
-                                    #& (grouped_data['pv_type'] == 'exponential')]
+data_subset["pred_e_eff"] = data_subset['e'] / data_subset['pred_bac_m_recursive']
 
-data_subset3["pred_e_eff"] = data_subset3['e'] / data_subset3['pred_bac_m_recursive']
-
-for group in data_subset3.groupby([colour, shape, line, 'pv_type']):
+for group in data_subset.groupby([colour, shape, line, 'theta', 'd']):
     data = group[1].sort_values(by = 'm_init')
-    if len(data) > 0:
-        colour_variable = group[0][0]
-        shape_variable = group[0][1]
-        line_variable = group[0][2]
-        pv_type = group[0][3]
 
-        pv_ind = pv_types.index(pv_type)
+    colour_variable = group[0][0]
+    shape_variable = group[0][1]
+    line_variable = group[0][2]
+    theta = group[0][3]
+    d = group[0][4]
 
-        colour_ind = list(np.sort(data_subset[colour].unique())).index(colour_variable)
-        shape_ind = list(np.sort(data_subset[shape].unique())).index(shape_variable)
+    theta_ind = list(np.sort(data_subset['theta'].unique())).index(theta)
+    d_ind = list(np.sort(data_subset['d'].unique())).index(d)
+        
+    if d == 0 and theta == 0:
+        marker_ind = 4
+        colour_ind = 0
+        colours = theta_rgbs
+    elif d==0:
+        marker_ind = 0
+        colour_ind = theta_ind
+        colours = theta_rgbs
+    elif theta == 0:
+        marker_ind = 1
+        colour_ind = d_ind
+        colours = d_rgbs
         
     P_est_std = ((data['establishment_rate_nvi_ss']['nanmean'] / data['measured_mutation_rate']['nanmean']) 
             * np.sqrt((data['establishment_rate_nvi_ss']['nanstd'] / data['establishment_rate_nvi_ss']['nanmean'])**2 
@@ -262,21 +344,21 @@ for group in data_subset3.groupby([colour, shape, line, 'pv_type']):
                 data['establishment_rate_nvi_ss']['nanmean'] / data['measured_mutation_rate']['nanmean'],
                     xerr = data['e_effective']['nanstd'], 
                   yerr = yerr,
-                c = 'k', alpha = 1 - ((pv_ind+1)/5),
-                 marker = markerstyles[pv_ind], mec ='k', markersize = markersize, linestyle = "None")
+                c = colours[colour_ind],
+                 marker = markerstyles[marker_ind], mec ='k', markersize = markersize, linestyle = "None")
 
 # plot theoretical line
-data = data_subset3[data_subset3['pv_type'] == 'binary'].sort_values(by = "pred_e_eff")
+data = data_subset[data_subset['pv_type'] == 'binary'].sort_values(by = "pred_e_eff")
 e = data['e']
 
 t, = ax2.plot(e/data['pred_bac_m_recursive'], 
     data['predicted_establishment_fraction_recursive'],
     linestyle = '-', color = 'k', linewidth = 2, zorder = 2, label = 'Theory')
 
-ax2.annotate("Increasing\ncross-reactivity",
-            xy=(3*10**-1, 6*10**-6), xycoords='data',
-            xytext=(1.5*10**-2, 2*10**-4), textcoords='data',
-            arrowprops=dict(facecolor='grey', arrowstyle="->"))
+#ax2.annotate("Increasing\ncross-reactivity",
+#            xy=(3*10**-1, 6*10**-6), xycoords='data',
+#            xytext=(1.5*10**-2, 2*10**-4), textcoords='data',
+#            arrowprops=dict(facecolor='grey', arrowstyle="->"))
 
 ax2.set_xscale('log')
 ax2.set_yscale('log')
@@ -293,8 +375,10 @@ ax2.set_title("A", loc = 'left', fontsize = title_fontsize)
 ax0.set_title("B", loc = 'left', fontsize = title_fontsize)
 ax1.set_title("C", loc = 'left', fontsize = title_fontsize)
 
-
 #plt.savefig("populations_vs_mean_m_e_eff_crossreactivity.pdf")
 #plt.savefig("populations_vs_mean_m_e_eff_crossreactivity.svg")
 plt.savefig("fig5.pdf")
 plt.savefig("fig5.svg")
+# -
+
+
