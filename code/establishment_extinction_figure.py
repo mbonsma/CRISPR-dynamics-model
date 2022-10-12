@@ -417,15 +417,15 @@ for i in range(len(shapevals)):
 # +
 ##### Axes layout #######
 
-fig = plt.figure(figsize = (11.5,7.8))
+fig = plt.figure(figsize = (8,7.8))
 title_fontsize = 16
-absolute_left = 0.06
-left_fitness = 0.64
+absolute_left = 0.1
+left_fitness = 0.65
 bottom_fitness = 0.56
 top_extinct = 0.44
 absolute_bottom = 0.08
 absolute_top = 0.95
-absolute_right = 0.94
+absolute_right = 0.97
 
 # establishment half
 gs_clonesize = gridspec.GridSpec(1,1)
@@ -439,7 +439,7 @@ gs_fitness.update(left=left_fitness, right=absolute_right, bottom = bottom_fitne
                   hspace = 0.1)
 
 gs_est = gridspec.GridSpec(1,1)
-gs_est.update(left=absolute_left, right=0.37, bottom = absolute_bottom, top = top_extinct)
+gs_est.update(left=absolute_left, right=0.85, bottom = absolute_bottom, top = top_extinct)
 ax3 = plt.subplot(gs_est[0])
 
 #gs2.update(left=0.22, right=0.8, bottom = 0.6, wspace=0.1)
@@ -447,18 +447,13 @@ ax3 = plt.subplot(gs_est[0])
 
 hspace_extinct = 0.1
 left_extinct = 0.675
-gs_ext = gridspec.GridSpec(1,2)
-gs_ext.update(left=0.43, right=0.92,top = top_extinct, bottom = absolute_bottom, wspace=0.15)
 
-#ax1 = plt.subplot(gs1[:-1, :])
-ax4 = plt.subplot(gs_ext[0])
-ax5 = plt.subplot(gs_ext[1])
-#ax8 = plt.subplot(gs_T_ext[0])
-#ax9 = plt.subplot(gs_T_ext[1])
+ax1.set_title("A", fontsize = title_fontsize, loc = 'left')
+ax3.set_title("C", fontsize = title_fontsize, loc = 'left')
 
 # colorbar
 gs_cbar = gridspec.GridSpec(1,1)
-gs_cbar.update(left=0.93, right=absolute_right, bottom = absolute_bottom, top = top_extinct)
+gs_cbar.update(left=absolute_right-0.09, right=absolute_right-0.07, bottom = absolute_bottom, top = top_extinct)
 ax_cbar = plt.subplot(gs_cbar[0])
 #cmap = sns.color_palette("hls", len(c0_vals))
 #cmap = ListedColormap(sns.color_palette('hls', len(c0_vals)).as_hex())
@@ -477,67 +472,6 @@ cbar.ax.fontsize=16
 width = 0.365
 height = 0.36
 
-ax1.set_title("A", fontsize = title_fontsize, loc = 'left')
-ax3.set_title("C", fontsize = title_fontsize, loc = 'left')
-ax4.set_title("D", fontsize = title_fontsize, loc = 'left')
-ax4.set_title("Bacteria")
-ax5.set_title("E", fontsize = title_fontsize, loc = 'left')
-ax5.set_title("Phage")
-
-
-### Plot bacteria and phage extinction
-
-for group in data_subset.groupby([colour, shape]):
-    data = group[1]
-
-    colour_variable = group[0][0]
-    shape_variable = group[0][1]
-
-    colour_ind = list(np.sort(data_subset[colour].unique())).index(colour_variable)
-    shape_ind = list(np.sort(data_subset[shape].unique())).index(shape_variable)
-            
-    bac_ext_std = data['mean_bac_extinction_time']['nanstd'] / phage_establishment_timescale
-
-    yerr = np.stack([np.zeros(bac_ext_std.shape), bac_ext_std])
-
-    ax4.errorbar(data['pred_bac_extinction_time_nodrift'] / phage_establishment_timescale, 
-                data['mean_bac_extinction_time']['nanmean'] / phage_establishment_timescale,
-                yerr = yerr,
-                c = colours[colour_ind], 
-           alpha = 0.7, marker = markerstyles[shape_ind], mec ='k', markersize = markersize, linestyle = "None")
-    
-    phage_ext_std = data['mean_large_trajectory_length_nvi_ss']['nanstd'] / phage_establishment_timescale
-
-    yerr = np.stack([np.zeros(phage_ext_std.shape), phage_ext_std])
-
-
-    ax5.errorbar(data['mean_T_backwards_nvi_ss_nbi_ss_recursive'] / phage_establishment_timescale,
-                data['mean_large_trajectory_length_nvi_ss']['nanmean'] / phage_establishment_timescale,
-                yerr = yerr,
-                c = colours[colour_ind], 
-           alpha = 0.7, marker = markerstyles[shape_ind], mec ='k', markersize = markersize, linestyle = "None")
-
-B = 170
-# c0 cancels out
-c0 = 10**4
-alpha = 2*10**-2/c0
-g = 1/(42*c0)
-B2 = (B*pv-1)*alpha/g
-
-ax5.set_yscale('log')
-ax5.set_xscale('log')
-ax4.set_yscale('log')
-ax4.set_xscale('log')
-ref_line, = ax4.plot([10**-1, 10**5], [10**-1, 10**5], 'k', label = r'$y = x$')
-ref_line, = ax5.plot([10**-1, 10**5], [10**-1, 10**5], 'k', label = r'$y = x$')
-ax4.set_xlim(10 / phage_establishment_timescale, 2*10**4 / phage_establishment_timescale)
-ax4.set_ylim(15 / phage_establishment_timescale, 2*10**4 / phage_establishment_timescale)
-ax5.set_xlim(90 / phage_establishment_timescale, 7*10**4 / phage_establishment_timescale)
-ax5.set_ylim(100 / phage_establishment_timescale, 2.1*10**4 / phage_establishment_timescale)
-ax4.set_xlabel("Predicted neutral time to extinction\n(Phage establishment timescale)")
-ax4.set_ylabel("Measured time to extinction")
-ax5.set_xlabel("Predicted neutral time to extinction\n(Phage establishment timescale)")
-#ax5.set_ylabel("Measured phage time to extinction")
 
 #ax4.legend(handles=legend_elements, loc='lower right', ncol = 1, fontsize = 9)
 
@@ -730,7 +664,7 @@ ax3.annotate(r"$\eta = %s$" %eta_vals[-1], xy = (0,0), xytext = (0.25,0.7), xyco
 ax3.set_yscale('log')
 ax3.set_xscale('log')
 
-xmin = 4.3*10**-3
+xmin = 4*10**-3
 xmax = 1.*10**0
 
 ax3.set_xlim(xmin, xmax)
@@ -746,7 +680,7 @@ legend_elements.append(Line2D([0], [0], label = 'Theory', linestyle = '-', color
 legend_elements.append(approxs[0])
 legend_elements.append(t2)
 
-ax3.legend(handles = legend_elements, ncol = 1, fontsize = 8, loc = 'lower right')
+ax3.legend(handles = legend_elements, ncol = 2, fontsize = 8, loc = 'lower right')
 
 #### Save
 
@@ -917,8 +851,100 @@ plt.savefig("p_est_vs_average_immunity_presentation.png", dpi = 350)
 # ## Supplementary plots
 
 # +
+fig = plt.figure(figsize = (8, 5))
+gs_ext = gridspec.GridSpec(1,2)
+bottom = 0.13
+top = 0.92
+gs_ext.update(left=0.1, right=0.88,top = top, bottom = bottom, wspace=0.15)
+
+#ax1 = plt.subplot(gs1[:-1, :])
+ax4 = plt.subplot(gs_ext[0])
+ax5 = plt.subplot(gs_ext[1])
+#ax8 = plt.subplot(gs_T_ext[0])
+#ax9 = plt.subplot(gs_T_ext[1])
+
+ax4.set_title("Bacteria")
+ax5.set_title("Phage")
+
+
+### Plot bacteria and phage extinction
+
+for group in data_subset.groupby([colour, shape]):
+    data = group[1]
+
+    colour_variable = group[0][0]
+    shape_variable = group[0][1]
+
+    colour_ind = list(np.sort(data_subset[colour].unique())).index(colour_variable)
+    shape_ind = list(np.sort(data_subset[shape].unique())).index(shape_variable)
+            
+    bac_ext_std = data['mean_bac_extinction_time']['nanstd'] / phage_establishment_timescale
+
+    yerr = np.stack([np.zeros(bac_ext_std.shape), bac_ext_std])
+
+    ax4.errorbar(data['pred_bac_extinction_time_nodrift'] / phage_establishment_timescale, 
+                data['mean_bac_extinction_time']['nanmean'] / phage_establishment_timescale,
+                yerr = yerr,
+                c = colours[colour_ind], 
+           alpha = 0.7, marker = markerstyles[shape_ind], mec ='k', markersize = markersize, linestyle = "None")
+    
+    phage_ext_std = data['mean_large_trajectory_length_nvi_ss']['nanstd'] / phage_establishment_timescale
+
+    yerr = np.stack([np.zeros(phage_ext_std.shape), phage_ext_std])
+
+
+    ax5.errorbar(data['mean_T_backwards_nvi_ss_nbi_ss_recursive'] / phage_establishment_timescale,
+                data['mean_large_trajectory_length_nvi_ss']['nanmean'] / phage_establishment_timescale,
+                yerr = yerr,
+                c = colours[colour_ind], 
+           alpha = 0.7, marker = markerstyles[shape_ind], mec ='k', markersize = markersize, linestyle = "None")
+
+B = 170
+# c0 cancels out
+c0 = 10**4
+alpha = 2*10**-2/c0
+g = 1/(42*c0)
+B2 = (B*pv-1)*alpha/g
+
+ax5.set_yscale('log')
+ax5.set_xscale('log')
+ax4.set_yscale('log')
+ax4.set_xscale('log')
+ref_line, = ax4.plot([10**-1, 10**5], [10**-1, 10**5], 'k', label = r'$y = x$')
+ref_line, = ax5.plot([10**-1, 10**5], [10**-1, 10**5], 'k', label = r'$y = x$')
+ax4.set_xlim(10 / phage_establishment_timescale, 2*10**4 / phage_establishment_timescale)
+ax4.set_ylim(15 / phage_establishment_timescale, 2*10**4 / phage_establishment_timescale)
+ax5.set_xlim(90 / phage_establishment_timescale, 7*10**4 / phage_establishment_timescale)
+ax5.set_ylim(100 / phage_establishment_timescale, 2.1*10**4 / phage_establishment_timescale)
+ax4.set_xlabel("Predicted neutral time to extinction\n(Phage establishment timescale)")
+ax4.set_ylabel("Measured time to extinction")
+ax5.set_xlabel("Predicted neutral time to extinction\n(Phage establishment timescale)")
+#ax5.set_ylabel("Measured phage time to extinction")
+
+ax5.legend(handles = legend_elements[:-2], ncol = 1, fontsize = 8, loc = 'lower right')
+
+# colorbar
+gs_cbar = gridspec.GridSpec(1,1)
+gs_cbar.update(left=0.89, right=0.93, bottom = bottom, top = top)
+ax_cbar = plt.subplot(gs_cbar[0])
+#cmap = sns.color_palette("hls", len(c0_vals))
+#cmap = ListedColormap(sns.color_palette('hls', len(c0_vals)).as_hex())
+cmap = sns.color_palette("hls", as_cmap=True)
+# figure out how much to truncate colormap to end at 10^6
+extent = np.log10(3*10**6) - np.log10(300) # log-range of c0 values for original color mapping
+new_extent = np.log10(10**6) - np.log10(300) # want to end at 10^6 instead
+fraction = (extent - new_extent)/extent
+new_cmap =  truncate_colormap(cmap, 0, 1-fraction, n=100)
+
+cbar = fig.colorbar(cm.ScalarMappable(norm= matplotlib.colors.LogNorm(vmin=min(c0_vals), vmax=10**6), cmap=new_cmap),
+             cax=ax_cbar, orientation='vertical', label='Nutrient concentration $C_0$')
+cbar.ax.fontsize=16
+
+plt.savefig("bac_phage_extinction.pdf")
+
+# +
 # set logm to False to drop the 1 + lnm term
-logm = True
+logm = False
 
 fig, axs = plt.subplots(2,2, figsize = (6,6), facecolor = 'white')
 
@@ -992,7 +1018,7 @@ axs[1,1].set_xlabel(label, fontsize = 13)
 axs[0,0].set_ylabel("Phage mean time to extinction\n(bacterial generations)")
 axs[1,0].set_ylabel("Phage mean time to extinction\n(bacterial generations)")
 axs[1,0].legend(handles = legend_elements[:7], ncol = 1, fontsize = 7)
-axs[1,1].legend(handles = legend_elements[7:-1], ncol = 1, fontsize = 7)
+axs[1,1].legend(handles = legend_elements[7:-2], ncol = 1, fontsize = 7)
 plt.tight_layout()
 
 plt.savefig("phage_extinction_eta_split_logm_%s.svg" %logm)
@@ -1000,7 +1026,7 @@ plt.savefig("phage_extinction_eta_split_logm_%s.pdf" %logm)
 
 # +
 # set logm to False to drop the 1 + lnm term
-logm = True
+logm = False
 
 fig, axs = plt.subplots(2,2, figsize = (6,6), facecolor = 'white')
 
@@ -1076,7 +1102,7 @@ axs[1,1].set_xlabel(label, fontsize = 13)
 axs[0,0].set_ylabel("Bacteria mean time to extinction\n(bacterial generations)")
 axs[1,0].set_ylabel("Bacteria mean time to extinction\n(bacterial generations)")
 axs[1,0].legend(handles = legend_elements[:7], ncol = 1, fontsize = 7)
-axs[1,1].legend(handles = legend_elements[7:-1], ncol = 1, fontsize = 7)
+axs[1,1].legend(handles = legend_elements[7:-2], ncol = 1, fontsize = 7)
 plt.tight_layout()
 
 plt.savefig("bacteria_extinction_eta_split_logm_%s.svg" %logm)
