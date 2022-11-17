@@ -17,8 +17,9 @@ All data-based figures in the main text can be generated from the following file
 * Figure 3: [establishment_extinction_figure.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/establishment_extinction_figure.py)
 * Figure 4: [phylogeny.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/phylogeny.py)
 * Figure 5: [crossreactivity_populations.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/crossreactivity_populations.py)
-* Figure 6: [abundance_speed_figure.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/abundance_speed_figure.py)
-* Figure 7: [time_shift.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/time_shift.py)
+* Figure 6: [array_length_model.md](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/array_length_model.md)
+* Figure 7: [abundance_speed_figure.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/abundance_speed_figure.py)
+* Figure 8: [time_shift.py](https://github.com/mbonsma/CRISPR-dynamics-model/blob/main/code/time_shift.py)
 
 ### Processing data from [Paez-Espino et al. 2015](https://pubmed.ncbi.nlm.nih.gov/25900652/)
 
