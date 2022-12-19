@@ -124,12 +124,12 @@ legend_elements = []
 
 # add binary case
 legend_elements.append(Line2D([0], [0], marker='*',  
-                                  label=r'$\theta =0, d=0$',
+                                  label=r'$\theta =0$',
                           markerfacecolor='k',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
 
 for i in range(len(data_subset['d'].unique())-1):
     legend_elements.append(Line2D([0], [0], marker=markerstyles[1],  
-                                  label='$d = %s$' %np.sort(data_subset['d'].unique())[i+1],
+                                  label=r'$\theta = %s$ (exp)' %np.sort(data_subset['d'].unique())[i+1],
                           markerfacecolor=d_rgbs[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
 
 for i in range(len(data_subset['theta'].unique())-1):
@@ -145,12 +145,12 @@ legend_elements.append(Line2D([0], [0], label = 'Theory', linestyle = '-', color
 legend_elements2 = []
 # add binary case
 legend_elements2.append(Line2D([0], [0], marker='*',  
-                                  label=r'$\theta =0, d=0$',
+                                  label=r'$\theta =0$',
                           markerfacecolor='k',markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
 
 for i in range(len(data_subset['d'].unique())-1):
     legend_elements2.append(Line2D([0], [0], marker=markerstyles[1],  
-                                  label='$d = %s$' %np.sort(data_subset['d'].unique())[i+1],
+                                  label=r'$\theta = %s$ (exp)' %np.sort(data_subset['d'].unique())[i+1],
                           markerfacecolor=d_rgbs_phage[i+1],markeredgecolor = 'k', markersize = markersize, linestyle = "None"))
 
 for i in range(len(data_subset['theta'].unique())-1):
