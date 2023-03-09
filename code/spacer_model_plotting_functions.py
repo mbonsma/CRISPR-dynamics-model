@@ -776,8 +776,6 @@ def get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, all_phage
     size_cutoff : phage clone size at which mean number of phage clones equals mean number of bacteria clones
     np.nanmean(nbs/nb) : mean nu (mean fraction of bacteria with spacers)
     np.nanmean(e_effective_list) : mean effective e
-    Delta_bac: effective number of bacteria alleles
-    Delta_phage: effective number of phage alleles
     """
     
     # take n snapshots and calculate the mean clone size by combining all clones
@@ -813,26 +811,12 @@ def get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, all_phage
         mean_large_phage_size = np.nanmean(nvi_snapshots[nvi_snapshots > size_cutoff])
     except:
         mean_large_phage_size = np.nan
-        
-    # effective # of alleles (Kimura & Crow 1964)
-
-    try:
-        nbi_freqs = nbi_snapshots / nbs[::int(len(nbs)/n_snapshots), np.newaxis]
-        Delta_bac = np.mean(1/np.sum(np.multiply(nbi_freqs, nbi_freqs), axis = 1))  # average across snapshots
-    except:
-        Delta_bac = np.nan
-    try:
-        nvi_freqs = nvi_snapshots / nv[::int(len(nv)/n_snapshots), np.newaxis]
-        Delta_phage = np.mean(1/np.sum(np.multiply(nvi_freqs, nvi_freqs), axis = 1)) # average across snapshots
-    except:
-        Delta_phage = np.nan
-
-    
+         
     # effective e parameter
     
     e_effective_list = effective_e(nbi_snapshots, nvi_snapshots, all_phages, pv_type, e, theta)
     
-    return mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, Delta_bac, Delta_phage, np.nanmean(nbs/nb), np.nanmean(e_effective_list)
+    return mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, np.nanmean(nbs/nb), np.nanmean(e_effective_list)
 
 def p_ext_virus(B, t, delta, N0):
     """

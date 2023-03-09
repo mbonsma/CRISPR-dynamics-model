@@ -216,7 +216,7 @@ for i, timestamp in tqdm(enumerate(timestamps_list)):
         e_effective = np.nan
     else:
         # get mean_m
-        (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, Delta_bac, Delta_phage, 
+        (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size,
              mean_nu, e_effective) = get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, 
                                                      all_phages, size_cutoff=1)
         

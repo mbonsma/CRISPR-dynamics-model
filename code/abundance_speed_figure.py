@@ -350,7 +350,7 @@ turnover_array_phage_Guerrero = fraction_remaining_paez_espino(phage_array, inte
 grouped_data = all_data.groupby(['C0', 'mu', 'eta', 'e', 'B', 'f', 'pv', 'm_init', 'pv_type', 'theta', 'gen_max'])[['mean_m',
        'mean_phage_m', 'mean_large_phage_m', 'mean_large_phage_size',
        'rescaled_phage_m', 'mean_nu', 'mean_nb',
-       'mean_nv', 'mean_C', 'Delta_bac', 'Delta_phage', 'e_effective',
+       'mean_nv', 'mean_C', 'e_effective',
        'fitness_discrepancy', 'mean_size_at_acquisition',
        'std_size_at_acquisition', 'fitness_at_90percent_acquisition',
        'fitness_at_mean_acquisition', 'fitness_at_first_acquisition',

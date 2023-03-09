@@ -172,7 +172,6 @@ data_non_extinct['predicted_establishment_rate'] = predicted_establishment_rate
 data_non_extinct['mutation_rate_pred'] = mutation_rate_pred  / (g*c0 )
 
 grouped_data = data_non_extinct.groupby(['C0', 'mu', 'eta', 'e', 'B', 'f', 'pv', 'm_init', 'pv_type', 'theta', 'gen_max'])[['mean_m', 'mean_phage_m', 
-                                                                                        'Delta_bac', 'Delta_phage',
                             'e_effective', 'mean_nu', 'mean_nb', 'mean_nv', 'rescaled_phage_m',
                             'mean_large_phage_m', 'mean_large_phage_size',
                             'mean_C', 'fitness_discrepancy', 

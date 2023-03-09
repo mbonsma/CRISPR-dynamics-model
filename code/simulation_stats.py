@@ -191,7 +191,7 @@ def simulation_stats(folder, timestamp):
                               pv, R, eta)
     
     # get phage clone sizes
-    (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, Delta_bac, Delta_phage, 
+    (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, 
          mean_nu, e_effective) = get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, all_phages, 1, 
                                                  n_snapshots = n_snapshots)
 
@@ -263,8 +263,6 @@ def simulation_stats(folder, timestamp):
     df['mean_nb'] =  [mean_nb]
     df['mean_nv'] = [mean_nv]
     df['mean_C'] = [mean_C]
-    df['Delta_bac'] = [Delta_bac]
-    df['Delta_phage'] = [Delta_phage]
     df['e_effective'] = [e_effective]
     df['fitness_discrepancy'] = [mean_phage_fitness[0]]
     df['mean_size_at_acquisition'] = [np.nanmean(phage_size_at_acquisition)] # mean phage clone size at the time that a spacer is acquired, ignoring trajectories for which no spacer is acquired
