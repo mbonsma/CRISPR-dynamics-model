@@ -17,6 +17,8 @@ import pandas as pd
 import re
 from scipy import sparse
 import argparse
+from scipy.interpolate import interp1d
+from sklearn.cluster import AgglomerativeClustering
 
 from sim_analysis_functions import (find_nearest, load_simulation)
 
@@ -24,7 +26,8 @@ from spacer_model_plotting_functions import (nbi_steady_state, nvi_steady_state,
                                              get_trajectories, interpolate_trajectories,
                                              get_clone_sizes, get_large_trajectories, 
                                              fraction_remaining, calculate_speed, 
-                                             bac_large_clone_extinction, get_bac_large_trajectories)
+                                             bac_large_clone_extinction, get_bac_large_trajectories, 
+					     e_effective_shifted)
 
 def phage_m_to_bac_m(nvi, nb, c0, g, f, alpha, pv, B, n_samples = 15):
     """
@@ -59,6 +62,97 @@ def phage_m_to_bac_m(nvi, nb, c0, g, f, alpha, pv, B, n_samples = 15):
     mean_m = np.sum(clone_size_survival*counts)/n_samples
     
     return mean_m
+
+def distance_sequence_1D(R1, R2, norm = "L1"):
+    """
+    Calculates distance between centre of masses.
+    
+    If norm == "L2", normalized so that the max distance is 1
+    (i.e. the hypercube sides are length 1 / sqrt(L))
+    
+    Input: two vectors of dimension (L)
+    
+    Output: float distance between vectors
+    """
+    
+    if norm == "L2":
+        # this is the distance from [1,1,1,...1] to [0,0,0,...0] in L-dimensional space
+        #normalization_length = np.sqrt(L)
+        return np.sqrt(np.sum((R1 - R2)**2))
+    elif norm == "L1":
+        return np.sum(np.abs(R1 - R2))
+    
+    # distance between centre of masses
+
+def distance_matrix_cluster(phage_list, cluster_labels):
+    """
+    Create a distance matrix sorting the sequences by cluster label.
+    
+    Example usage: distance_matrix_cluster(all_phages_nonzero, clust_phage.labels_)
+    
+    Inputs:
+    phage_list : array of n sequences being clustered, shape n x L
+    cluster_labels : array of shape n with labels for each of the sequences
+    """
+    
+    distance_matrix = np.zeros((len(phage_list), len(phage_list)))
+    
+    for i in range(len(phage_list)):
+        distance_matrix[i] = np.sum(np.abs(phage_list[np.argsort(cluster_labels)] 
+                                                 - phage_list[np.argsort(cluster_labels)][i]), axis = 1)
+        
+    return distance_matrix
+    
+
+def centre_of_mass(all_phages, n_i):
+    """
+    Calculates the centre of mass in sequence space for a given vector of abundances
+    Inputs:
+    all_phages : Sequence vector of length m giving spacer or protospacer sequences
+    ni : abundance vector of length m giving phage or bacteria abundances at a particular time point
+    Returns:
+    R : centre of mass, an array of length L
+    """
+    
+    pwm = np.multiply(all_phages.T, n_i).T / np.sum(n_i)
+    R = np.sum(pwm, axis = 0)
+    return R
+
+def average_distance(all_phages, n_i, ancestor, return_lists = False):
+    """
+    Calculate the average distance between a population of clones and an ancestral population.
+    
+    Inputs:
+    all_phages : list of all phage sequences corresponding to columns in pop_array
+    n_i : list of clone sizes corresponding to the rows of all_phages (either bac or phage)
+    ancestor : sequence to calculate distance to
+    """
+    existing_clones = n_i[n_i > 0] # nonzero clones
+  
+    distance = []
+    
+    for seq in all_phages[n_i > 0]:
+        distance.append(distance_sequence_1D(ancestor, seq, norm = "L1"))
+    
+    distance = np.array(distance)
+    
+    avg_distance = np.sum(existing_clones*distance) / np.sum(existing_clones) # weighted average of distances
+
+    if return_lists == False:
+        return avg_distance
+    else:
+        return avg_distance, existing_clones, distance
+
+def max_establishments_pred(nu, nv, nb, m, g, c0, alpha, B, mu, L, pv, e, time_interval):
+    """
+    Calculate the predicted number of phage establishments over the course of a simulation
+    time_interval: time in bacterial generations to calculate establishments during
+    """
+    
+    P_est = 2*e*nu/(m*(B-1))
+    mu_bar = alpha*B*mu*L*pv*nv*nb*(1-e*nu/m)/(g*c0) # only approximating 1-e^{-mu L}
+    
+    return P_est*mu_bar*time_interval
 
 def simulation_stats(folder, timestamp):
     
@@ -191,7 +285,7 @@ def simulation_stats(folder, timestamp):
                               pv, R, eta)
     
     # get phage clone sizes
-    (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size, 
+    (mean_m, mean_phage_m, mean_large_phage_m, mean_large_phage_size,
          mean_nu, e_effective) = get_clone_sizes(pop_array, c0, e, max_m, t_ss_ind, pv_type, theta, all_phages, 1, 
                                                  n_snapshots = n_snapshots)
 
@@ -209,8 +303,8 @@ def simulation_stats(folder, timestamp):
                                                     t_trajectories, nbi_ss, g, c0, sim_length_ss)
 
     # get spacer turnover and turnover speed
-    turnover_array, interp_times = fraction_remaining(pop_array, t_ss, t_ss_ind, g, c0, gen_max, max_m)
-    speed, start_ind = calculate_speed(turnover_array, interp_times)
+    turnover_array, interp_t = fraction_remaining(pop_array, t_ss, t_ss_ind, g, c0, gen_max, max_m)
+    speed, start_ind = calculate_speed(turnover_array, interp_t)
 
     F = f*g*c0
     beta = mean_nb*alpha*pv
@@ -221,8 +315,8 @@ def simulation_stats(folder, timestamp):
     p = beta / (beta + delta)
     predicted_establishment_fraction = (1 - (2-3*B*p + p*B**2)/(B*p*(B-1)))
     
-    nvi = pop_array[t_ss_ind:, max_m+1 : 2*max_m + 1]
-    rescaled_phage_m = phage_m_to_bac_m(nvi, mean_nb, c0, g, f, alpha, pv, B)
+    nvi_sparse = pop_array[t_ss_ind:, max_m+1 : 2*max_m + 1]
+    rescaled_phage_m = phage_m_to_bac_m(nvi_sparse, mean_nb, c0, g, f, alpha, pv, B)
     
     all_mutation_times = []
     
@@ -234,6 +328,215 @@ def simulation_stats(folder, timestamp):
     all_mutation_times_ss = all_mutation_times[all_mutation_times*g*c0 > t_ss]
     
     mutation_rate_actual = len(all_mutation_times_ss)/((all_mutation_times_ss[-1] - all_mutation_times_ss[0])*g*c0)
+    
+    ### speed and distance calculations
+    
+    timepoints = pop_array[t_ss_ind:, -1].toarray().flatten()*g*c0 - t_ss
+
+    # interpolate population sizes to have consistent time spacing
+    interp_fun_nbi = interp1d(timepoints, nbi, kind='linear', axis = 0)
+    interp_fun_nvi = interp1d(timepoints, nvi, kind='linear', axis = 0)
+        
+    # create distance matrix for all the phages that ever lived
+    all_phages = np.array(all_phages)
+
+    distance_matrix = np.zeros((len(all_phages), len(all_phages)))
+
+    for i in range(len(all_phages)):
+        distance_matrix[i] = np.sum(np.abs(all_phages - all_phages[i]), axis = 1)
+
+    timestep = 5 # timestep in generations
+    
+    # subsample the simulation times
+    interp_times = np.arange(t_ss + timestep, gen_max, timestep) - t_ss
+    
+    phage_array = interp_fun_nvi(interp_times)
+    bac_array = interp_fun_nbi(interp_times)
+    
+    try:
+        pos_phage_ancestor = centre_of_mass(all_phages, phage_array[0]) # CM sequence at t_ss
+        pos_bac_ancestor = centre_of_mass(all_phages, bac_array[0]) # CM sequence at t_ss
+    except ValueError:
+        print("ValueError: %s" %timestamp)
+        raise
+        
+    count = 1
+    while np.any(np.isnan(pos_bac_ancestor)):
+        pos_bac_ancestor = centre_of_mass(all_phages, bac_array[count])
+        count += 1
+
+    bac_spread = []
+    phage_spread = []
+
+    pos_phage = []
+    pos_bac = []
+    
+    for t_ind in range(phage_array.shape[0]):
+        R_phage = centre_of_mass(all_phages, phage_array[t_ind])
+        pos_phage.append(R_phage)
+        R_bac = centre_of_mass(all_phages, bac_array[t_ind])
+        pos_bac.append(R_bac)
+
+        # weighted average of distances from current centre of mass
+        avg_bac_spread = average_distance(all_phages, bac_array[t_ind], R_bac)
+        avg_phage_spread = average_distance(all_phages, phage_array[t_ind], R_phage)
+
+        avg_bac_distance, existing_bac, distance_existing_bac = average_distance(all_phages, bac_array[t_ind], 
+                                                                                 pos_bac_ancestor, return_lists = True)
+        avg_phage_distance, existing_phage, distance_existing_phage = average_distance(all_phages, phage_array[t_ind], 
+                                                                                       pos_phage_ancestor, return_lists = True)
+
+        dist_and_size_phage = np.stack([distance_existing_phage[np.argsort(distance_existing_phage)], 
+                      existing_phage[np.argsort(distance_existing_phage)]]).T
+
+        dist_and_size_bac = np.stack([distance_existing_bac[np.argsort(distance_existing_bac)], 
+                      existing_bac[np.argsort(distance_existing_bac)]]).T
+
+        # phage population size grouped by distance from ancestor
+        pop_sizes_grouped = np.split(dist_and_size_phage[:,1], np.unique(dist_and_size_phage[:, 0], return_index=True)[1][1:])
+        pop_sizes_grouped_bac = np.split(dist_and_size_bac[:,1], np.unique(dist_and_size_bac[:, 0], return_index=True)[1][1:])
+
+        pop_sizes_phage = []
+        for l in pop_sizes_grouped:
+            pop_sizes_phage.append(np.sum(l))
+
+        pop_sizes_bac = []
+        for l in pop_sizes_grouped_bac:
+            pop_sizes_bac.append(np.sum(l))
+
+        pop_sizes_phage = np.array(pop_sizes_phage)
+        pop_sizes_bac = np.array(pop_sizes_bac)
+
+        bac_spread.append(avg_bac_spread)
+        phage_spread.append(avg_phage_spread)
+
+    # get distances 
+    bac_distance = []  # distance from starting position
+    bac_phage_distance = [] # current distance between bacteria and phage
+    bac_instantaneous_distance = []
+    for j, pos in enumerate(pos_bac):
+        bac_distance.append(distance_sequence_1D(pos_bac_ancestor, pos, norm = "L1"))
+        bac_phage_distance.append(distance_sequence_1D(pos, pos_phage[j], norm = "L1"))
+        if j > 1:
+            bac_instantaneous_distance.append(distance_sequence_1D(pos_bac[j-1], pos, norm = "L1"))
+
+    phage_distance = []  # distance from starting position
+    phage_instantaneous_distance = []
+    for j, pos in enumerate(pos_phage):
+        phage_distance.append(distance_sequence_1D(pos_phage_ancestor, pos, norm = "L1"))
+        if j > 1:
+            phage_instantaneous_distance.append(distance_sequence_1D(pos_phage[j-1], pos, norm = "L1"))
+    
+    
+    # get first passage times for distance
+    
+    time_to_reach_bac = []
+    time_to_reach_phage = []
+
+    for d in distance_checkpoints:
+        if d <= np.max(bac_distance):
+            time_to_reach_bac.append(interp_times[np.where(np.array(bac_distance) >= d)[0][0]])
+        else:
+            time_to_reach_bac.append(np.nan)
+
+        if d <= np.max(phage_distance):
+            time_to_reach_phage.append(interp_times[np.where(np.array(phage_distance) >= d)[0][0]])
+        else:
+            time_to_reach_phage.append(np.nan)
+    
+    bac_speed_mean = np.mean(bac_instantaneous_distance) / timestep
+    phage_speed_mean = np.mean(phage_instantaneous_distance) / timestep
+    bac_speed_std = np.std(bac_instantaneous_distance) / timestep
+    phage_speed_std = np.std(phage_instantaneous_distance) / timestep
+    
+    # speed and distance in abundance space
+    # normalize so that each time point abundance vector is 1
+
+    phage_array_norm = phage_array / np.sum(phage_array, axis = 1)[:,None]
+    bac_array_norm = bac_array / np.sum(bac_array, axis = 1)[:,None]
+    
+    skip = int(timestep*2) # assuming each time point is every 0.5 generations
+    
+    abundance_distance_phage = np.sum(np.abs(np.subtract(phage_array_norm[: -(skip)] , 
+                                                         phage_array_norm[skip:])), axis = 1)
+    abundance_distance_phage_ancestor = np.sum(np.abs(np.subtract(phage_array_norm , 
+                                                                  phage_array_norm[0][None, :])), axis = 1)
+    abundance_distance_bac = np.sum(np.abs(np.subtract(bac_array_norm[: -(skip)] , 
+                                                         bac_array_norm[skip:])), axis = 1)
+    abundance_distance_bac_ancestor = np.sum(np.abs(np.subtract(bac_array_norm , 
+                                                                  bac_array_norm[0][None, :])), axis = 1)
+    try:
+        time_to_full_turnover_phage = interp_times[np.where(abundance_distance_phage_ancestor == 2)[0]][0]
+    except:
+        time_to_full_turnover_phage = np.nan
+        
+    try:
+        time_to_full_turnover_bac = interp_times[np.where(abundance_distance_bac_ancestor == 2)[0]][0]
+    except:
+        time_to_full_turnover_bac = np.nan
+        
+        
+    ## clan number and size
+    t_skip = 50 # time interval in generations to sample at
+
+    clan_number_bac = []
+    clan_number_phage = []
+    clan_size_mean_bac = []
+    clan_size_mean_phage = []
+
+    times = np.arange(t_ss, gen_max, t_skip)
+    for t in times:
+    
+        t_ind = find_nearest(pop_array[:, -1].toarray().flatten()*g*c0, t)
+
+        nonzero_inds = pop_array[t_ind, max_m+1:2*max_m +1].toarray().flatten() > 0
+        all_phages_nonzero = all_phages[nonzero_inds]
+
+        nonzero_inds_bac = pop_array[t_ind, 1:max_m +1].toarray().flatten() > 0
+        bac_nonzero = all_phages[nonzero_inds_bac]
+
+        model_phage = AgglomerativeClustering(n_clusters = None, distance_threshold = 2,
+                                        affinity = 'l1', linkage = 'single')
+        model_bac = AgglomerativeClustering(n_clusters = None, distance_threshold = 2,
+                                        affinity = 'l1', linkage = 'single')
+
+        if bac_nonzero.shape[0] <= 1: # only 0 or 1 spacer, can't do clustering
+            clan_number_bac.append(bac_nonzero.shape[0])
+            clan_size_mean_bac.append(bac_nonzero.shape[0])
+        else:
+            clust_bac = model_bac.fit(bac_nonzero)
+            clan_sizes_bac = np.unique(clust_bac.labels_, return_counts = True)[1]
+            clan_number_bac.append(len(np.unique(clust_bac.labels_)))
+            clan_size_mean_bac.append(np.mean(clan_sizes_bac))
+            
+        if all_phages_nonzero.shape[0] <= 1: # only 0 or 1 protospacer, can't do clustering
+            clan_number_phage.append(all_phages_nonzero.shape[0])
+            clan_size_mean_phage.append(all_phages_nonzero.shape[0])
+        else:
+            clust_phage = model_phage.fit(all_phages_nonzero)
+            clan_sizes_phage = np.unique(clust_phage.labels_, return_counts = True)[1]
+            clan_number_phage.append(len(np.unique(clust_phage.labels_)))
+            clan_size_mean_phage.append(np.mean(clan_sizes_phage))
+
+    ### time shift
+
+    nbi_interp = bac_array
+    nvj_interp = phage_array
+    
+    e_eff_mean_past, e_eff_std_past = e_effective_shifted(e, nbi_interp, 
+                                                          nvj_interp, max_shift = max_shift, direction = 'past')
+    
+    e_eff_mean_future, e_eff_std_future = e_effective_shifted(e, nbi_interp, 
+                                                          nvj_interp, max_shift = max_shift, direction = 'future')
+    
+    peak_time = interp_times[np.argmax(e_eff_mean_past[:100])]
+    # not sure if :100 is the best cutoff to use, monitor its value
+    if np.argmax(e_eff_mean_past[:100]) > 99:
+        print(peak_time)
+        print(timestamp)
+
+    slope = (e_eff_mean_future[slope_width] - e_eff_mean_past[slope_width]) / interp_times[slope_width*2]
+        
     
     # add to data frame
     
@@ -288,8 +591,57 @@ def simulation_stats(folder, timestamp):
     df['establishment_rate_bac'] = [bac_establishment_rate]
     df['mean_bac_establishment_time'] = [establishment_time_bac]
     
+    ### speed and distance stuff
+    df["bac_speed_mean"] = [bac_speed_mean]
+    df["bac_speed_std"] = [bac_speed_std]
+    df["phage_speed_mean"] = [phage_speed_mean]
+    df["phage_speed_std"] = [phage_speed_std]
+    df["bac_spread_mean"] = [np.nanmean(bac_spread)]
+    df["bac_spread_std"] = [np.nanstd(bac_spread)]
+    df["phage_spread_mean"] = [np.nanmean(phage_spread)]
+    df["phage_spread_std"] = [np.nanstd(phage_spread)]
+    df["net_phage_displacement"] = [phage_distance[-1]]
+    df["net_bac_displacement"] = [bac_distance[-1]]
+    df["max_phage_displacement"] = [np.max(phage_distance)]
+    df["max_phage_displacement_10000"] = [np.max(np.array(phage_distance)[interp_times <=10000])] # max until 10000 gens
+    df["max_bac_displacement"] = [np.max(bac_distance)]
+    df["max_bac_displacement_10000"] = [np.max(np.array(bac_distance)[interp_times <=10000])]
+    df["bac_phage_distance_mean"] = [np.nanmean(bac_phage_distance)] # mean distance between bacteria and phage
+    df["bac_phage_distance_std"] = [np.nanstd(bac_phage_distance)]
+    df["sim_length_ss"] = [sim_length_ss]
+    # note: in this version, this time already has the steady-state start time subtracted (usually 2000 gens)
+    df["time_to_full_turnover_phage"] = [time_to_full_turnover_phage]
+    df["time_to_full_turnover_bac"] = [time_to_full_turnover_bac]
+    df["phage_abundance_speed_mean"] = [np.nanmean(abundance_distance_phage) / timestep]
+    df["phage_abundance_speed_std"] = [np.nanstd(abundance_distance_phage) / timestep]
+    df["bac_abundance_speed_mean"] = [np.nanmean(abundance_distance_bac) / timestep]
+    df["bac_abundance_speed_std"] = [np.nanstd(abundance_distance_bac) / timestep]
+    df["bac_clan_number"] = [np.nanmean(clan_number_bac)]
+    df["phage_clan_number"] = [np.nanmean(clan_number_phage)]
+    df["bac_clan_number_std"] = [np.nanstd(clan_number_bac)]
+    df["phage_clan_number_std"] = [np.nanstd(clan_number_phage)]
+    df["bac_clan_size"] = [np.nanmean(clan_size_mean_bac)]
+    df["phage_clan_size"] = [np.nanmean(clan_size_mean_phage)]
+    df["bac_clan_size_std"] = [np.nanstd(clan_size_mean_bac)]
+    df["phage_clan_size_std"] = [np.nanstd(clan_size_mean_phage)]
+    
+    for n, d in enumerate(distance_checkpoints):
+        df["time_to_reach_bac_%s" %d] = [time_to_reach_bac[n]]
+        df["time_to_reach_phage_%s" %d] = [time_to_reach_phage[n]]
+    
+    df['pred_num_establishments'] = max_establishments_pred(mean_nu, mean_nv, mean_nb, 
+                        mean_m, g, c0, alpha, B, mu, L, pv, e, gen_max - t_ss)
+    
+    df['measured_num_establishments'] = establishment_rate*(gen_max - t_ss)
+    # number of establishments in 8000 steady-state generations (for more uniform comparison)
+    df['measured_num_establishments_8000'] = establishment_rate*8000
+    
+    ### time shift stuff
+    df['slope'] = [slope]
+    df['peak_immunity'] = [peak_time]
+    
     # add mean_m to dataframe by joining on parameters that vary
-    new_data = all_params.merge(df, on = ['C0', 'mu', 'eta', 'e', 'B', 'f', 'pv' 'm_init', 'theta'])
+    new_data = all_params.merge(df, on = ['C0', 'mu', 'eta', 'e', 'B', 'f', 'pv', 'm_init', 'theta'])
     
     try:
         all_data.columns == new_data.columns
@@ -326,6 +678,11 @@ if __name__ == "__main__":
     all_data = pd.read_csv("all_data.csv", index_col=0)
     
     n_snapshots = 50 # number of points to sample (evenly) to get population averages
+    
+    distance_checkpoints = [0.25, 0.5, 1, 2, 5, 10, 15] # first passage time distance checkpoints
+
+    max_shift = 400 # largest time shift to use to calculate memory length
+    slope_width = 3
 
     exponential_pv_dates = ["2019-06-24", "2021-09-09"]
     exponential_pv_025_dates = ["2021-02-01", "2021-09-08"]
